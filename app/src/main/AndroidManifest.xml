@@ -9,6 +9,9 @@
         android:usesCleartextTraffic="true">
 
         <activity
+            android:name=".features.supplierinvoice.SupplierInvoiceDetailActivity" />
+
+        <activity
             android:name=".features.login.MainActivity"
             android:exported="true">
             <intent-filter>

@@ -1,5 +1,8 @@
 package id.hyperpos.mobile.features.login
 
+import android.content.Intent
+import android.content.Intent
+import android.content.Intent
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import id.hyperpos.mobile.R
@@ -7,6 +10,9 @@ import id.hyperpos.mobile.application.procurement.GetSupplierInvoiceDetailUseCas
 import id.hyperpos.mobile.application.procurement.ListSupplierInvoicesUseCase
 import id.hyperpos.mobile.databinding.ActivityMainBinding
 import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceListRow
+import id.hyperpos.mobile.features.supplierinvoice.SupplierInvoiceDetailActivity
+import id.hyperpos.mobile.features.supplierinvoice.SupplierInvoiceDetailActivity
+import id.hyperpos.mobile.features.supplierinvoice.SupplierInvoiceDetailActivity
 import kotlin.concurrent.thread
 
 class SupplierInvoiceUiController(
@@ -53,7 +59,10 @@ class SupplierInvoiceUiController(
 
     fun selectAndLoadDetail(row: MobileSupplierInvoiceListRow) {
         selectedId = listView.select(row)
-        loadDetail()
+        val intent = Intent(activity, SupplierInvoiceDetailActivity::class.java).apply {
+            putExtra(SupplierInvoiceDetailActivity.EXTRA_SUPPLIER_INVOICE_ID, selectedId)
+        }
+        activity.startActivity(intent)
     }
 
     fun loadDetail() {
