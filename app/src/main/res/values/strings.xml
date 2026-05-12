@@ -17,6 +17,6 @@
     <string name="supplier_invoice_ready">Tekan tombol untuk memuat nota supplier.</string>
     <string name="supplier_invoice_detail_button">Lihat Detail Nota Pertama</string>
     <string name="supplier_invoice_detail_ready">Muat daftar nota supplier terlebih dahulu.</string>
-    <string name="supplier_invoice_upload_proof_button">Pilih & Unggah Bukti Pembayaran</string>
+    <string name="supplier_invoice_upload_proof_button">Pilih &amp; Unggah Bukti Pembayaran</string>
     <string name="supplier_invoice_upload_proof_ready">Pilih file JPG, PNG, atau PDF maksimal 2 MB.</string>
 </resources>
