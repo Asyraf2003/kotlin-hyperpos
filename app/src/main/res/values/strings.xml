@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">HyperPOS Mobile</string>
+    <string name="login_ready">HyperPOS login ready</string>
+    <string name="login_email_hint">Email</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_device_name_hint">Device name</string>
+    <string name="default_device_name">Redmi 12</string>
+    <string name="login_button">Login</string>
+    <string name="product_search_title">Pencarian Produk Kasir</string>
+    <string name="product_search_hint">Cari produk, contoh: ban</string>
+    <string name="product_search_button">Cari Produk</string>
+    <string name="product_search_ready">Masukkan kata kunci minimal 2 karakter.</string>
+</resources>
