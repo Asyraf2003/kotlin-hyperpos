@@ -3,12 +3,18 @@ package id.hyperpos.mobile.adapters.http
 import id.hyperpos.mobile.application.ports.SupplierInvoiceApiPort
 import id.hyperpos.mobile.application.procurement.SupplierInvoiceDetailResult
 import id.hyperpos.mobile.application.procurement.SupplierInvoiceListResult
+import id.hyperpos.mobile.application.procurement.SupplierInvoicePaymentProofFile
+import id.hyperpos.mobile.application.procurement.UploadSupplierInvoicePaymentProofResult
 import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceLine
 import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceListRow
+import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoicePaymentProofUpload
 import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceSummary
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
 
@@ -136,6 +142,65 @@ class OkHttpSupplierInvoiceApiClient(
         }
     }
 
+    override fun uploadPaymentProofBySupplierInvoiceId(
+        token: String,
+        supplierInvoiceId: String,
+        proofFiles: List<SupplierInvoicePaymentProofFile>,
+    ): UploadSupplierInvoicePaymentProofResult {
+        val url = config.normalizedBaseUrl.toHttpUrl()
+            .newBuilder()
+            .addPathSegment("supplier-invoices")
+            .addPathSegment(supplierInvoiceId)
+            .addPathSegment("payment-proof")
+            .build()
+
+        val multipart = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+
+        proofFiles.forEach { proofFile ->
+            multipart.addFormDataPart(
+                "proof_files[]",
+                proofFile.fileName,
+                proofFile.bytes.toRequestBody(proofFile.mediaType.toMediaTypeOrNull()),
+            )
+        }
+
+        val httpRequest = Request.Builder()
+            .url(url)
+            .post(multipart.build())
+            .header("Accept", "application/json")
+            .header("Authorization", "Bearer $token")
+            .build()
+
+        return try {
+            httpClient.newCall(httpRequest).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                val json = JSONObject(body)
+
+                if (response.code == HTTP_UNAUTHORIZED) {
+                    return UploadSupplierInvoicePaymentProofResult.Unauthenticated(
+                        json.optString("message", "Sesi login tidak valid. Silakan login ulang."),
+                    )
+                }
+
+                if (!response.isSuccessful || !json.optBoolean("success", false)) {
+                    return UploadSupplierInvoicePaymentProofResult.Failure(
+                        json.optString("message", "Bukti pembayaran supplier gagal diunggah."),
+                    )
+                }
+
+                UploadSupplierInvoicePaymentProofResult.Success(
+                    upload = parsePaymentProofUpload(json.getJSONObject("data")),
+                    message = json.optString("message", "Bukti pembayaran supplier berhasil diunggah."),
+                )
+            }
+        } catch (_: IOException) {
+            UploadSupplierInvoicePaymentProofResult.Failure("Tidak bisa terhubung ke server HyperPOS.")
+        } catch (_: Exception) {
+            UploadSupplierInvoicePaymentProofResult.Failure("Respons server tidak valid.")
+        }
+    }
+
     private fun parseListRow(row: JSONObject): MobileSupplierInvoiceListRow {
         return MobileSupplierInvoiceListRow(
             supplierInvoiceId = row.getString("supplier_invoice_id"),
@@ -189,6 +254,17 @@ class OkHttpSupplierInvoiceApiClient(
             qtyPcs = line.getInt("qty_pcs"),
             lineTotalRupiah = line.getLong("line_total_rupiah"),
             unitCostRupiah = line.getLong("unit_cost_rupiah"),
+        )
+    }
+
+    private fun parsePaymentProofUpload(data: JSONObject): MobileSupplierInvoicePaymentProofUpload {
+        return MobileSupplierInvoicePaymentProofUpload(
+            supplierInvoiceId = data.getString("supplier_invoice_id"),
+            supplierPaymentId = data.getString("supplier_payment_id"),
+            amountRupiah = data.getLong("amount_rupiah"),
+            outstandingRupiah = data.getLong("outstanding_rupiah"),
+            proofStatus = data.getString("proof_status"),
+            attachmentCount = data.getInt("attachment_count"),
         )
     }
 

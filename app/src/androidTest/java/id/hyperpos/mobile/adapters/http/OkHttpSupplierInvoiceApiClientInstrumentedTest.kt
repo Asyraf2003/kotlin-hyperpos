@@ -11,6 +11,8 @@ import id.hyperpos.mobile.application.procurement.GetSupplierInvoiceDetailUseCas
 import id.hyperpos.mobile.application.procurement.ListSupplierInvoicesUseCase
 import id.hyperpos.mobile.application.procurement.SupplierInvoiceDetailResult
 import id.hyperpos.mobile.application.procurement.SupplierInvoiceListResult
+import id.hyperpos.mobile.application.procurement.SupplierInvoicePaymentProofFile
+import id.hyperpos.mobile.application.procurement.UploadSupplierInvoicePaymentProofResult
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -110,6 +112,26 @@ class OkHttpSupplierInvoiceApiClientInstrumentedTest {
             }
             is SupplierInvoiceDetailResult.Success -> fail("Expected unauthenticated supplier invoice detail for invalid token.")
             is SupplierInvoiceDetailResult.Failure -> fail("Expected unauthenticated supplier invoice detail, got failure: ${detailResult.message}")
+        }
+
+        when (
+            val uploadResult = supplierInvoiceApi.uploadPaymentProofBySupplierInvoiceId(
+                token = invalidToken,
+                supplierInvoiceId = supplierInvoiceId,
+                proofFiles = listOf(
+                    SupplierInvoicePaymentProofFile(
+                        fileName = "android-invalid-token-proof.txt",
+                        mediaType = "text/plain",
+                        bytes = "invalid-token-proof".toByteArray(),
+                    ),
+                ),
+            )
+        ) {
+            is UploadSupplierInvoicePaymentProofResult.Unauthenticated -> {
+                assertTrue(uploadResult.message.isNotBlank())
+            }
+            is UploadSupplierInvoicePaymentProofResult.Success -> fail("Expected unauthenticated supplier invoice proof upload for invalid token.")
+            is UploadSupplierInvoicePaymentProofResult.Failure -> fail("Expected unauthenticated supplier invoice proof upload, got failure: ${uploadResult.message}")
         }
     }
 
