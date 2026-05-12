@@ -105,6 +105,58 @@ class MainActivitySupplierInvoiceInstrumentedTest {
     }
 
     @Test
+    fun logoutClearsSupplierInvoiceListAndDetailUiState() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            loginAsAdmin()
+
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceContainer)).check(matches(isDisplayed()))
+            }
+
+            onView(withId(R.id.supplierInvoiceListButton)).perform(
+                scrollTo(),
+                click(),
+            )
+
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceListStatusText)).check(
+                    matches(withSubstring("Nota supplier dimuat")),
+                )
+            }
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceDetailButton)).check(matches(isDisplayed()))
+            }
+
+            onView(withId(R.id.supplierInvoiceDetailButton)).perform(
+                scrollTo(),
+                click(),
+            )
+
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceDetailStatusText)).check(
+                    matches(withSubstring("Detail nota supplier dimuat")),
+                )
+            }
+
+            onView(withId(R.id.logoutButton)).perform(
+                scrollTo(),
+                click(),
+            )
+
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceContainer)).check(matches(not(isDisplayed())))
+            }
+            waitUntil {
+                onView(withId(R.id.productSearchContainer)).check(matches(not(isDisplayed())))
+            }
+            waitUntil {
+                onView(withId(R.id.logoutButton)).check(matches(not(isDisplayed())))
+            }
+        }
+    }
+
+
+    @Test
     fun cashierLoginDoesNotShowSupplierInvoicesUi() {
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.emailInput)).perform(
