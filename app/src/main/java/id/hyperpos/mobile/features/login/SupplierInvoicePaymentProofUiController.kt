@@ -43,6 +43,7 @@ class SupplierInvoicePaymentProofUiController(
     }
 
     fun onDetailLoaded() = readyMessage()
+
     fun onFailure() {
         canUpload = false
         actionView.sync(canUpload)
@@ -53,9 +54,13 @@ class SupplierInvoicePaymentProofUiController(
     }
 
     fun onCaptured(bitmap: Bitmap?) {
+        val file = bitmap?.let(cameraFileFactory::from)
         if (bitmap == null) return readyMessage()
-        cameraFileFactory.from(bitmap)?.let(::uploadFile)
-            ?: actionView.message("Foto bukti pembayaran maksimal 2 MB.", canUpload)
+        if (file == null) {
+            actionView.message("Foto bukti pembayaran maksimal 2 MB.", canUpload)
+            return
+        }
+        uploadFile(file)
     }
 
     private fun open() {
@@ -74,9 +79,9 @@ class SupplierInvoicePaymentProofUiController(
         val file = fileReader.read(uri)
         if (file == null) {
             actionView.message("File bukti pembayaran harus JPG, PNG, atau PDF maksimal 2 MB.", canUpload)
-            return
+        } else {
+            uploadFile(file)
         }
-        uploadFile(file)
     }
 
     private fun uploadFile(file: SupplierInvoicePaymentProofFile) {
@@ -90,19 +95,17 @@ class SupplierInvoicePaymentProofUiController(
 
     private fun handleUploadResult(result: UploadSupplierInvoicePaymentProofResult) {
         when (result) {
-            is UploadSupplierInvoicePaymentProofResult.Success -> handleSuccess(result)
+            is UploadSupplierInvoicePaymentProofResult.Success -> {
+                canUpload = false
+                actionView.message(renderer.paymentProofUploadSuccess(result), canUpload)
+                refreshList()
+                loadDetail()
+            }
             is UploadSupplierInvoicePaymentProofResult.Failure ->
                 actionView.message(result.message, canUpload)
             is UploadSupplierInvoicePaymentProofResult.Unauthenticated ->
                 onUnauthenticated(result.message)
         }
-    }
-
-    private fun handleSuccess(result: UploadSupplierInvoicePaymentProofResult.Success) {
-        canUpload = false
-        actionView.message(renderer.paymentProofUploadSuccess(result), canUpload)
-        refreshList()
-        loadDetail()
     }
 
     private fun readyMessage() {

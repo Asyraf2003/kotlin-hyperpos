@@ -42,24 +42,27 @@ class MainActivity : AppCompatActivity() {
         productUi = ProductSearchUiController(
             this, binding, deps.searchProductsUseCase, renderer, ::handleUnauthenticated,
         )
-        listOf(authUi::bind, productUi::bind, supplierUi::bind, proofUi::bind).forEach { it() }
+        authUi.bind()
+        productUi.bind()
+        supplierUi.bind()
+        proofUi.bind()
     }
 
     private fun proofController(renderer: MobileUiTextRenderer) =
         SupplierInvoicePaymentProofUiController(
-            activity = this,
-            uploadUseCase = deps.uploadSupplierInvoicePaymentProofUseCase,
-            fileReader = SupplierInvoicePaymentProofFileReader(contentResolver),
-            renderer = renderer,
-            actionView = SupplierInvoicePaymentProofActionView(binding),
-            sourceDialog = SupplierInvoiceProofSourceDialog(this),
-            cameraFileFactory = SupplierInvoiceCameraProofFileFactory(),
-            openFilePicker = { proofFilePicker.launch(SupplierInvoicePaymentProofFileReader.MIME_TYPES) },
-            openGalleryPicker = { proofGalleryPicker.launch(arrayOf("image/jpeg", "image/png")) },
-            openCamera = { proofCamera.launch(null) },
-            onUnauthenticated = ::handleUnauthenticated,
-            refreshList = { supplierUi.refreshListKeepingSelection() },
-            loadDetail = { supplierUi.loadDetail() },
+            this,
+            deps.uploadSupplierInvoicePaymentProofUseCase,
+            SupplierInvoicePaymentProofFileReader(contentResolver),
+            renderer,
+            SupplierInvoicePaymentProofActionView(binding),
+            SupplierInvoiceProofSourceDialog(this),
+            SupplierInvoiceCameraProofFileFactory(),
+            { proofFilePicker.launch(SupplierInvoicePaymentProofFileReader.MIME_TYPES) },
+            { proofGalleryPicker.launch(arrayOf("image/jpeg", "image/png")) },
+            { proofCamera.launch(null) },
+            ::handleUnauthenticated,
+            { supplierUi.refreshListKeepingSelection() },
+            { supplierUi.loadDetail() },
         )
 
     private fun supplierController(renderer: MobileUiTextRenderer) =
@@ -69,12 +72,12 @@ class MainActivity : AppCompatActivity() {
             listUseCase = deps.listSupplierInvoicesUseCase,
             detailUseCase = deps.getSupplierInvoiceDetailUseCase,
             listView = SupplierInvoiceListResultView(
-                binding = binding,
-                renderer = renderer,
-                proofUi = proofUi,
-                rowButtonFactory = SupplierInvoiceRowButtonFactory(this),
-                onRowSelected = { row -> supplierUi.selectAndLoadDetail(row) },
-                onUnauthenticated = ::handleUnauthenticated,
+                binding,
+                renderer,
+                proofUi,
+                SupplierInvoiceRowButtonFactory(this),
+                { row -> supplierUi.selectAndLoadDetail(row) },
+                ::handleUnauthenticated,
             ),
             detailView = SupplierInvoiceDetailResultView(
                 binding, renderer, proofUi, ::handleUnauthenticated,
