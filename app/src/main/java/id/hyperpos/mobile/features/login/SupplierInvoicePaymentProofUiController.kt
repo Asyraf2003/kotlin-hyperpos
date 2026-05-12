@@ -42,32 +42,26 @@ class SupplierInvoicePaymentProofUiController(
         actionView.clear()
     }
 
-    fun onDetailLoaded() = actionView.message(
-        activity.getString(R.string.supplier_invoice_upload_proof_ready),
-        canUpload,
-    )
-
+    fun onDetailLoaded() = readyMessage()
     fun onFailure() {
         canUpload = false
         actionView.sync(canUpload)
     }
 
     fun onPicked(uri: Uri?) {
-        if (uri == null) return readyMessage()
-        uploadUri(uri)
+        if (uri == null) readyMessage() else uploadUri(uri)
     }
 
     fun onCaptured(bitmap: Bitmap?) {
         if (bitmap == null) return readyMessage()
-        val file = cameraFileFactory.from(bitmap)
-        if (file == null) return actionView.message("Foto bukti pembayaran maksimal 2 MB.", canUpload)
-        uploadFile(file)
+        cameraFileFactory.from(bitmap)?.let(::uploadFile)
+            ?: actionView.message("Foto bukti pembayaran maksimal 2 MB.", canUpload)
     }
 
     private fun open() {
-        val id = selectedId
         when {
-            id.isNullOrBlank() -> actionView.message("Pilih faktur supplier terlebih dahulu.", canUpload)
+            selectedId.isNullOrBlank() ->
+                actionView.message("Pilih faktur supplier terlebih dahulu.", canUpload)
             !canUpload -> actionView.message(
                 "Faktur supplier ini tidak bisa diunggah bukti pembayarannya.",
                 canUpload,
@@ -97,8 +91,10 @@ class SupplierInvoicePaymentProofUiController(
     private fun handleUploadResult(result: UploadSupplierInvoicePaymentProofResult) {
         when (result) {
             is UploadSupplierInvoicePaymentProofResult.Success -> handleSuccess(result)
-            is UploadSupplierInvoicePaymentProofResult.Failure -> actionView.message(result.message, canUpload)
-            is UploadSupplierInvoicePaymentProofResult.Unauthenticated -> onUnauthenticated(result.message)
+            is UploadSupplierInvoicePaymentProofResult.Failure ->
+                actionView.message(result.message, canUpload)
+            is UploadSupplierInvoicePaymentProofResult.Unauthenticated ->
+                onUnauthenticated(result.message)
         }
     }
 

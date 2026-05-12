@@ -33,60 +33,53 @@ class MainActivity : AppCompatActivity() {
 
     private fun wireControllers() {
         val renderer = MobileUiTextRenderer()
-        proofUi = createProofUi(renderer)
-        supplierUi = createSupplierUi(renderer)
+        proofUi = proofController(renderer)
+        supplierUi = supplierController(renderer)
         authUi = LoginUiController(
-            activity = this,
-            binding = binding,
-            loginUseCase = deps.loginUseCase,
-            logoutUseCase = deps.logoutUseCase,
-            onAuthenticated = ::showAuthenticatedUi,
-            resetAuthenticatedUi = ::resetAuthenticatedUi,
+            this, binding, deps.loginUseCase, deps.logoutUseCase,
+            ::showAuthenticatedUi, ::resetAuthenticatedUi,
         )
         productUi = ProductSearchUiController(
-            activity = this,
-            binding = binding,
-            searchUseCase = deps.searchProductsUseCase,
-            renderer = renderer,
-            onUnauthenticated = ::handleUnauthenticated,
+            this, binding, deps.searchProductsUseCase, renderer, ::handleUnauthenticated,
         )
-        authUi.bind()
-        productUi.bind()
-        supplierUi.bind()
-        proofUi.bind()
+        listOf(authUi::bind, productUi::bind, supplierUi::bind, proofUi::bind).forEach { it() }
     }
 
-    private fun createProofUi(renderer: MobileUiTextRenderer) = SupplierInvoicePaymentProofUiController(
-        activity = this,
-        uploadUseCase = deps.uploadSupplierInvoicePaymentProofUseCase,
-        fileReader = SupplierInvoicePaymentProofFileReader(contentResolver),
-        renderer = renderer,
-        actionView = SupplierInvoicePaymentProofActionView(binding),
-        sourceDialog = SupplierInvoiceProofSourceDialog(this),
-        cameraFileFactory = SupplierInvoiceCameraProofFileFactory(),
-        openFilePicker = { proofFilePicker.launch(SupplierInvoicePaymentProofFileReader.MIME_TYPES) },
-        openGalleryPicker = { proofGalleryPicker.launch(arrayOf("image/jpeg", "image/png")) },
-        openCamera = { proofCamera.launch(null) },
-        onUnauthenticated = ::handleUnauthenticated,
-        refreshList = { supplierUi.refreshListKeepingSelection() },
-        loadDetail = { supplierUi.loadDetail() },
-    )
-
-    private fun createSupplierUi(renderer: MobileUiTextRenderer) = SupplierInvoiceUiController(
-        activity = this,
-        binding = binding,
-        listUseCase = deps.listSupplierInvoicesUseCase,
-        detailUseCase = deps.getSupplierInvoiceDetailUseCase,
-        listView = SupplierInvoiceListResultView(
-            binding = binding,
+    private fun proofController(renderer: MobileUiTextRenderer) =
+        SupplierInvoicePaymentProofUiController(
+            activity = this,
+            uploadUseCase = deps.uploadSupplierInvoicePaymentProofUseCase,
+            fileReader = SupplierInvoicePaymentProofFileReader(contentResolver),
             renderer = renderer,
-            proofUi = proofUi,
-            rowButtonFactory = SupplierInvoiceRowButtonFactory(this),
-            onRowSelected = { row -> supplierUi.selectAndLoadDetail(row) },
+            actionView = SupplierInvoicePaymentProofActionView(binding),
+            sourceDialog = SupplierInvoiceProofSourceDialog(this),
+            cameraFileFactory = SupplierInvoiceCameraProofFileFactory(),
+            openFilePicker = { proofFilePicker.launch(SupplierInvoicePaymentProofFileReader.MIME_TYPES) },
+            openGalleryPicker = { proofGalleryPicker.launch(arrayOf("image/jpeg", "image/png")) },
+            openCamera = { proofCamera.launch(null) },
             onUnauthenticated = ::handleUnauthenticated,
-        ),
-        detailView = SupplierInvoiceDetailResultView(binding, renderer, proofUi, ::handleUnauthenticated),
-    )
+            refreshList = { supplierUi.refreshListKeepingSelection() },
+            loadDetail = { supplierUi.loadDetail() },
+        )
+
+    private fun supplierController(renderer: MobileUiTextRenderer) =
+        SupplierInvoiceUiController(
+            activity = this,
+            binding = binding,
+            listUseCase = deps.listSupplierInvoicesUseCase,
+            detailUseCase = deps.getSupplierInvoiceDetailUseCase,
+            listView = SupplierInvoiceListResultView(
+                binding = binding,
+                renderer = renderer,
+                proofUi = proofUi,
+                rowButtonFactory = SupplierInvoiceRowButtonFactory(this),
+                onRowSelected = { row -> supplierUi.selectAndLoadDetail(row) },
+                onUnauthenticated = ::handleUnauthenticated,
+            ),
+            detailView = SupplierInvoiceDetailResultView(
+                binding, renderer, proofUi, ::handleUnauthenticated,
+            ),
+        )
 
     private fun showAuthenticatedUi(role: String) {
         val isAdmin = role == "admin"
