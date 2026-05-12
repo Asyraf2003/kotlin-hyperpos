@@ -123,6 +123,47 @@ class MainActivitySupplierInvoiceInstrumentedTest {
     }
 
     @Test
+    fun adminCanSearchSupplierInvoicesByNomorFakturFromUi() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            loginAsAdmin()
+
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceContainer)).check(matches(isDisplayed()))
+            }
+            waitUntil {
+                onView(withId(R.id.productSearchContainer)).check(matches(not(isDisplayed())))
+            }
+
+            onView(withId(R.id.supplierInvoiceSearchInput)).perform(
+                scrollTo(),
+                replaceText("SI-BL-20260502-067"),
+            )
+
+            onView(withId(R.id.supplierInvoiceListButton)).perform(
+                scrollTo(),
+                click(),
+            )
+
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceListStatusText)).check(
+                    matches(withSubstring("Nota supplier dimuat")),
+                )
+            }
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceListResultsText)).check(
+                    matches(withSubstring("Nomor faktur: SI-BL-20260502-067")),
+                )
+            }
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceListResultsText)).check(
+                    matches(withSubstring("Status pembayaran:")),
+                )
+            }
+        }
+    }
+
+
+    @Test
     fun logoutClearsSupplierInvoiceListAndDetailUiState() {
         ActivityScenario.launch(MainActivity::class.java).use {
             loginAsAdmin()
