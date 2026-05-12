@@ -38,20 +38,9 @@ class MainActivitySupplierInvoiceInstrumentedTest {
     }
 
     @Test
-    fun adminCanLoginAndLoadSupplierInvoicesFromUi() {
+    fun adminCanLoginLoadSupplierInvoicesAndLoadFirstInvoiceDetailFromUi() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.emailInput)).perform(
-                replaceText("mobile-admin-android-supplier-invoice@example.test"),
-            )
-            onView(withId(R.id.passwordInput)).perform(
-                replaceText("MobileAdminSmoke123!"),
-            )
-            onView(withId(R.id.deviceNameInput)).perform(
-                clearText(),
-                replaceText("android-supplier-invoice-ui-regression"),
-            )
-
-            onView(withId(R.id.loginButton)).perform(click())
+            loginAsAdmin()
 
             waitUntil {
                 onView(withId(R.id.logoutButton)).check(matches(isDisplayed()))
@@ -83,6 +72,35 @@ class MainActivitySupplierInvoiceInstrumentedTest {
                     matches(withSubstring("Status:")),
                 )
             }
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceDetailButton)).check(matches(isDisplayed()))
+            }
+
+            onView(withId(R.id.supplierInvoiceDetailButton)).perform(
+                scrollTo(),
+                click(),
+            )
+
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceDetailStatusText)).check(
+                    matches(withSubstring("Detail nota supplier dimuat")),
+                )
+            }
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceDetailResultsText)).check(
+                    matches(withSubstring("Nomor faktur:")),
+                )
+            }
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceDetailResultsText)).check(
+                    matches(withSubstring("Total: Rp")),
+                )
+            }
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceDetailResultsText)).check(
+                    matches(withSubstring("Rincian barang:")),
+                )
+            }
         }
     }
 
@@ -112,6 +130,21 @@ class MainActivitySupplierInvoiceInstrumentedTest {
                 onView(withId(R.id.supplierInvoiceContainer)).check(matches(not(isDisplayed())))
             }
         }
+    }
+
+    private fun loginAsAdmin() {
+        onView(withId(R.id.emailInput)).perform(
+            replaceText("mobile-admin-android-supplier-invoice@example.test"),
+        )
+        onView(withId(R.id.passwordInput)).perform(
+            replaceText("MobileAdminSmoke123!"),
+        )
+        onView(withId(R.id.deviceNameInput)).perform(
+            clearText(),
+            replaceText("android-supplier-invoice-detail-ui-regression"),
+        )
+
+        onView(withId(R.id.loginButton)).perform(click())
     }
 
     private fun waitUntil(

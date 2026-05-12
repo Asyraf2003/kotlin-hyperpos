@@ -13,12 +13,16 @@ import id.hyperpos.mobile.application.auth.LoginResult
 import id.hyperpos.mobile.application.auth.LoginUseCase
 import id.hyperpos.mobile.application.auth.LogoutResult
 import id.hyperpos.mobile.application.auth.LogoutUseCase
+import id.hyperpos.mobile.application.procurement.GetSupplierInvoiceDetailUseCase
 import id.hyperpos.mobile.application.procurement.ListSupplierInvoicesUseCase
+import id.hyperpos.mobile.application.procurement.SupplierInvoiceDetailResult
 import id.hyperpos.mobile.application.procurement.SupplierInvoiceListResult
 import id.hyperpos.mobile.application.product.ProductSearchResult
 import id.hyperpos.mobile.application.product.SearchProductsUseCase
 import id.hyperpos.mobile.databinding.ActivityMainBinding
+import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceLine
 import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceListRow
+import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceSummary
 import id.hyperpos.mobile.domain.product.MobileProductSearchRow
 import okhttp3.OkHttpClient
 import java.text.NumberFormat
@@ -27,6 +31,7 @@ import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
+    private var selectedSupplierInvoiceId: String? = null
 
     private val apiConfig by lazy {
         MobileApiConfig(baseUrl = "http://127.0.0.1:8000/api/v1")
@@ -61,6 +66,13 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    private val supplierInvoiceApi by lazy {
+        OkHttpSupplierInvoiceApiClient(
+            config = apiConfig,
+            httpClient = httpClient,
+        )
+    }
+
     private val searchProductsUseCase by lazy {
         SearchProductsUseCase(
             productSearchApi = OkHttpProductSearchApiClient(
@@ -73,10 +85,14 @@ class MainActivity : AppCompatActivity() {
 
     private val listSupplierInvoicesUseCase by lazy {
         ListSupplierInvoicesUseCase(
-            supplierInvoiceApi = OkHttpSupplierInvoiceApiClient(
-                config = apiConfig,
-                httpClient = httpClient,
-            ),
+            supplierInvoiceApi = supplierInvoiceApi,
+            tokenStore = tokenStore,
+        )
+    }
+
+    private val getSupplierInvoiceDetailUseCase by lazy {
+        GetSupplierInvoiceDetailUseCase(
+            supplierInvoiceApi = supplierInvoiceApi,
             tokenStore = tokenStore,
         )
     }
@@ -107,6 +123,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.supplierInvoiceListButton.setOnClickListener {
             listSupplierInvoices()
+        }
+
+        binding.supplierInvoiceDetailButton.setOnClickListener {
+            loadSupplierInvoiceDetail()
         }
     }
 
@@ -184,11 +204,7 @@ class MainActivity : AppCompatActivity() {
                         binding.productSearchStatusText.text = result.message
                         binding.productSearchResultsText.text = ""
                     }
-                    is ProductSearchResult.Unauthenticated -> {
-                        tokenStore.clear()
-                        resetAuthenticatedUi()
-                        binding.statusText.text = result.message
-                    }
+                    is ProductSearchResult.Unauthenticated -> handleUnauthenticated(result.message)
                 }
             }
         }
@@ -198,6 +214,7 @@ class MainActivity : AppCompatActivity() {
         binding.supplierInvoiceListButton.isEnabled = false
         binding.supplierInvoiceListStatusText.text = "Memuat nota supplier..."
         binding.supplierInvoiceListResultsText.text = ""
+        resetSupplierInvoiceDetailSelection()
 
         thread {
             val result = listSupplierInvoicesUseCase.execute(
@@ -210,6 +227,12 @@ class MainActivity : AppCompatActivity() {
 
                 when (result) {
                     is SupplierInvoiceListResult.Success -> {
+                        selectedSupplierInvoiceId = result.rows.firstOrNull()?.supplierInvoiceId
+                        binding.supplierInvoiceDetailButton.visibility = if (selectedSupplierInvoiceId.isNullOrBlank()) {
+                            View.GONE
+                        } else {
+                            View.VISIBLE
+                        }
                         binding.supplierInvoiceListStatusText.text = "Nota supplier dimuat (${result.rows.size}/${result.perPage})"
                         binding.supplierInvoiceListResultsText.text = renderSupplierInvoiceRows(result.rows)
                     }
@@ -217,14 +240,52 @@ class MainActivity : AppCompatActivity() {
                         binding.supplierInvoiceListStatusText.text = result.message
                         binding.supplierInvoiceListResultsText.text = ""
                     }
-                    is SupplierInvoiceListResult.Unauthenticated -> {
-                        tokenStore.clear()
-                        resetAuthenticatedUi()
-                        binding.statusText.text = result.message
-                    }
+                    is SupplierInvoiceListResult.Unauthenticated -> handleUnauthenticated(result.message)
                 }
             }
         }
+    }
+
+    private fun loadSupplierInvoiceDetail() {
+        val supplierInvoiceId = selectedSupplierInvoiceId
+        if (supplierInvoiceId.isNullOrBlank()) {
+            binding.supplierInvoiceDetailStatusText.text = "Pilih nota supplier dari daftar terlebih dahulu."
+            binding.supplierInvoiceDetailResultsText.text = ""
+            return
+        }
+
+        binding.supplierInvoiceDetailButton.isEnabled = false
+        binding.supplierInvoiceDetailStatusText.text = "Memuat detail nota supplier..."
+        binding.supplierInvoiceDetailResultsText.text = ""
+
+        thread {
+            val result = getSupplierInvoiceDetailUseCase.execute(supplierInvoiceId)
+
+            runOnUiThread {
+                binding.supplierInvoiceDetailButton.isEnabled = true
+
+                when (result) {
+                    is SupplierInvoiceDetailResult.Success -> {
+                        binding.supplierInvoiceDetailStatusText.text = "Detail nota supplier dimuat"
+                        binding.supplierInvoiceDetailResultsText.text = renderSupplierInvoiceDetail(
+                            summary = result.summary,
+                            lines = result.lines,
+                        )
+                    }
+                    is SupplierInvoiceDetailResult.Failure -> {
+                        binding.supplierInvoiceDetailStatusText.text = result.message
+                        binding.supplierInvoiceDetailResultsText.text = ""
+                    }
+                    is SupplierInvoiceDetailResult.Unauthenticated -> handleUnauthenticated(result.message)
+                }
+            }
+        }
+    }
+
+    private fun handleUnauthenticated(message: String) {
+        tokenStore.clear()
+        resetAuthenticatedUi()
+        binding.statusText.text = message
     }
 
     private fun resetAuthenticatedUi() {
@@ -241,6 +302,15 @@ class MainActivity : AppCompatActivity() {
         binding.supplierInvoiceListButton.isEnabled = true
         binding.supplierInvoiceListStatusText.text = getString(id.hyperpos.mobile.R.string.supplier_invoice_ready)
         binding.supplierInvoiceListResultsText.text = ""
+        resetSupplierInvoiceDetailSelection()
+    }
+
+    private fun resetSupplierInvoiceDetailSelection() {
+        selectedSupplierInvoiceId = null
+        binding.supplierInvoiceDetailButton.visibility = View.GONE
+        binding.supplierInvoiceDetailButton.isEnabled = true
+        binding.supplierInvoiceDetailStatusText.text = getString(id.hyperpos.mobile.R.string.supplier_invoice_detail_ready)
+        binding.supplierInvoiceDetailResultsText.text = ""
     }
 
     private fun renderProductRows(rows: List<MobileProductSearchRow>): String {
@@ -272,6 +342,42 @@ class MainActivity : AppCompatActivity() {
                 supplierName,
                 "Outstanding: Rp ${rupiahFormat.format(row.outstandingRupiah)}",
                 "Status: ${row.policyState}",
+            ).joinToString(separator = "\n")
+        }
+    }
+
+    private fun renderSupplierInvoiceDetail(
+        summary: MobileSupplierInvoiceSummary,
+        lines: List<MobileSupplierInvoiceLine>,
+    ): String {
+        val supplierName = summary.supplierNamaPtPengirimCurrent
+            ?: summary.supplierNamaPtPengirimSnapshot
+            ?: "Supplier tidak diketahui"
+
+        return listOf(
+            listOf(
+                "Nomor faktur: ${summary.nomorFaktur}",
+                "Supplier: $supplierName",
+                "Total: Rp ${rupiahFormat.format(summary.grandTotalRupiah)}",
+                "Outstanding: Rp ${rupiahFormat.format(summary.outstandingRupiah)}",
+                "Status: ${summary.policyState}",
+            ).joinToString(separator = "\n"),
+            "Rincian barang:",
+            renderSupplierInvoiceLines(lines),
+        ).joinToString(separator = "\n\n")
+    }
+
+    private fun renderSupplierInvoiceLines(lines: List<MobileSupplierInvoiceLine>): String {
+        if (lines.isEmpty()) {
+            return "Tidak ada rincian barang."
+        }
+
+        return lines.take(5).joinToString(separator = "\n\n") { line ->
+            listOf(
+                line.namaBarang,
+                "Qty: ${line.qtyPcs}",
+                "Harga satuan: Rp ${rupiahFormat.format(line.unitCostRupiah)}",
+                "Subtotal: Rp ${rupiahFormat.format(line.lineTotalRupiah)}",
             ).joinToString(separator = "\n")
         }
     }

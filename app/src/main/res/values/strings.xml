@@ -14,4 +14,6 @@
     <string name="supplier_invoice_title">Nota Supplier Admin</string>
     <string name="supplier_invoice_button">Muat Nota Supplier</string>
     <string name="supplier_invoice_ready">Tekan tombol untuk memuat nota supplier.</string>
+    <string name="supplier_invoice_detail_button">Muat Detail Nota Pertama</string>
+    <string name="supplier_invoice_detail_ready">Muat daftar nota supplier terlebih dahulu.</string>
 </resources>
