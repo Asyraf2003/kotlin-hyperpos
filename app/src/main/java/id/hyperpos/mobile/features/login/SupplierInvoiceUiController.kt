@@ -1,8 +1,6 @@
 package id.hyperpos.mobile.features.login
 
 import android.content.Intent
-import android.content.Intent
-import android.content.Intent
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import id.hyperpos.mobile.R
@@ -10,8 +8,6 @@ import id.hyperpos.mobile.application.procurement.GetSupplierInvoiceDetailUseCas
 import id.hyperpos.mobile.application.procurement.ListSupplierInvoicesUseCase
 import id.hyperpos.mobile.databinding.ActivityMainBinding
 import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceListRow
-import id.hyperpos.mobile.features.supplierinvoice.SupplierInvoiceDetailActivity
-import id.hyperpos.mobile.features.supplierinvoice.SupplierInvoiceDetailActivity
 import id.hyperpos.mobile.features.supplierinvoice.SupplierInvoiceDetailActivity
 import kotlin.concurrent.thread
 
@@ -59,19 +55,14 @@ class SupplierInvoiceUiController(
 
     fun selectAndLoadDetail(row: MobileSupplierInvoiceListRow) {
         selectedId = listView.select(row)
-        val intent = Intent(activity, SupplierInvoiceDetailActivity::class.java).apply {
-            putExtra(SupplierInvoiceDetailActivity.EXTRA_SUPPLIER_INVOICE_ID, selectedId)
-        }
+        val intent = Intent(activity, SupplierInvoiceDetailActivity::class.java)
+        intent.putExtra(SupplierInvoiceDetailActivity.EXTRA_SUPPLIER_INVOICE_ID, selectedId)
         activity.startActivity(intent)
     }
 
     fun loadDetail() {
         val id = selectedId
-        if (id.isNullOrBlank()) {
-            binding.supplierInvoiceDetailStatusText.text = "Pilih nota supplier dari daftar terlebih dahulu."
-            binding.supplierInvoiceDetailResultsText.text = ""
-            return
-        }
+        if (id.isNullOrBlank()) return missingSelection()
         binding.supplierInvoiceDetailButton.isEnabled = false
         binding.supplierInvoiceDetailStatusText.text = "Memuat detail nota supplier..."
         binding.supplierInvoiceDetailResultsText.text = ""
@@ -92,17 +83,20 @@ class SupplierInvoiceUiController(
         }
     }
 
+    private fun missingSelection() {
+        binding.supplierInvoiceDetailStatusText.text = "Pilih nota supplier dari daftar terlebih dahulu."
+        binding.supplierInvoiceDetailResultsText.text = ""
+    }
+
     private fun resetDetailSelection() {
         selectedId = null
         binding.supplierInvoiceDetailButton.visibility = View.GONE
         binding.supplierInvoiceDetailButton.isEnabled = true
-        binding.supplierInvoiceDetailStatusText.text =
-            activity.getString(R.string.supplier_invoice_detail_ready)
+        binding.supplierInvoiceDetailStatusText.text = activity.getString(R.string.supplier_invoice_detail_ready)
         binding.supplierInvoiceDetailResultsText.text = ""
         listView.resetProof()
     }
 
-    private fun query(): String? {
-        return binding.supplierInvoiceSearchInput.text.toString().trim().takeIf { it.isNotEmpty() }
-    }
+    private fun query() = binding.supplierInvoiceSearchInput.text.toString().trim()
+        .takeIf { it.isNotEmpty() }
 }
