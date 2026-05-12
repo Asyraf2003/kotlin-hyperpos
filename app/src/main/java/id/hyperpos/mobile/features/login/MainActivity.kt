@@ -13,9 +13,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var proofUi: SupplierInvoicePaymentProofUiController
 
     private val deps by lazy { MainActivityDependencies(this) }
-    private val proofPicker = registerForActivityResult(
+    private val proofFilePicker = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> proofUi.onPicked(uri) }
+    private val proofGalleryPicker = registerForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> proofUi.onPicked(uri) }
+    private val proofCamera = registerForActivityResult(
+        ActivityResultContracts.TakePicturePreview(),
+    ) { bitmap -> proofUi.onCaptured(bitmap) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +41,13 @@ class MainActivity : AppCompatActivity() {
             fileReader = SupplierInvoicePaymentProofFileReader(contentResolver),
             renderer = renderer,
             actionView = proofView,
-            openPicker = { proofPicker.launch(SupplierInvoicePaymentProofFileReader.MIME_TYPES) },
+            sourceDialog = SupplierInvoiceProofSourceDialog(this),
+            cameraFileFactory = SupplierInvoiceCameraProofFileFactory(),
+            openFilePicker = {
+                proofFilePicker.launch(SupplierInvoicePaymentProofFileReader.MIME_TYPES)
+            },
+            openGalleryPicker = { proofGalleryPicker.launch(arrayOf("image/jpeg", "image/png")) },
+            openCamera = { proofCamera.launch(null) },
             onUnauthenticated = ::handleUnauthenticated,
             refreshList = { supplierUi.refreshListKeepingSelection() },
             loadDetail = { supplierUi.loadDetail() },
@@ -45,7 +57,14 @@ class MainActivity : AppCompatActivity() {
             binding = binding,
             listUseCase = deps.listSupplierInvoicesUseCase,
             detailUseCase = deps.getSupplierInvoiceDetailUseCase,
-            listView = SupplierInvoiceListResultView(binding, renderer, proofUi, ::handleUnauthenticated),
+            listView = SupplierInvoiceListResultView(
+                binding = binding,
+                renderer = renderer,
+                proofUi = proofUi,
+                rowButtonFactory = SupplierInvoiceRowButtonFactory(this),
+                onRowSelected = { row -> supplierUi.selectAndLoadDetail(row) },
+                onUnauthenticated = ::handleUnauthenticated,
+            ),
             detailView = SupplierInvoiceDetailResultView(binding, renderer, proofUi, ::handleUnauthenticated),
         )
         authUi = LoginUiController(
@@ -71,9 +90,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAuthenticatedUi(role: String) {
+        val isAdmin = role == "admin"
+
         authUi.showAuthenticatedControls()
         productUi.setVisible(role == "kasir")
-        supplierUi.setVisible(role == "admin")
+        supplierUi.setVisible(isAdmin)
+        if (isAdmin) {
+            supplierUi.listSupplierInvoices()
+        }
     }
 
     private fun handleUnauthenticated(message: String) {

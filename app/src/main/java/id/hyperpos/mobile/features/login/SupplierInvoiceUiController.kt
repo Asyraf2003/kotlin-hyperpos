@@ -6,6 +6,7 @@ import id.hyperpos.mobile.R
 import id.hyperpos.mobile.application.procurement.GetSupplierInvoiceDetailUseCase
 import id.hyperpos.mobile.application.procurement.ListSupplierInvoicesUseCase
 import id.hyperpos.mobile.databinding.ActivityMainBinding
+import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceListRow
 import kotlin.concurrent.thread
 
 class SupplierInvoiceUiController(
@@ -49,6 +50,11 @@ class SupplierInvoiceUiController(
                 selectedId = listView.apply(result, keepId = null)
             }
         }
+    }
+
+    fun selectAndLoadDetail(row: MobileSupplierInvoiceListRow) {
+        selectedId = listView.select(row)
+        loadDetail()
     }
 
     fun loadDetail() {

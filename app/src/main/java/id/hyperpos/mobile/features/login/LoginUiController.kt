@@ -41,7 +41,7 @@ class LoginUiController(
         val request = LoginRequest(
             email = binding.emailInput.text.toString().trim(),
             password = binding.passwordInput.text.toString(),
-            deviceName = binding.deviceNameInput.text.toString().trim(),
+            deviceName = deviceName(),
         )
 
         thread {
@@ -81,8 +81,15 @@ class LoginUiController(
         val visibility = if (visible) View.VISIBLE else View.GONE
         binding.emailInput.visibility = visibility
         binding.passwordInput.visibility = visibility
-        binding.deviceNameInput.visibility = visibility
+        binding.deviceNameInput.visibility = View.GONE
         binding.loginButton.visibility = visibility
         binding.loginButton.isEnabled = true
+    }
+
+    private fun deviceName(): String {
+        val value = binding.deviceNameInput.text.toString().trim()
+        return value.ifBlank {
+            activity.getString(id.hyperpos.mobile.R.string.default_device_name)
+        }
     }
 }

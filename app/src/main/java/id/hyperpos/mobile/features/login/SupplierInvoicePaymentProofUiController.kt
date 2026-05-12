@@ -1,8 +1,10 @@
 package id.hyperpos.mobile.features.login
 
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import id.hyperpos.mobile.R
+import id.hyperpos.mobile.application.procurement.SupplierInvoicePaymentProofFile
 import id.hyperpos.mobile.application.procurement.UploadSupplierInvoicePaymentProofResult
 import id.hyperpos.mobile.application.procurement.UploadSupplierInvoicePaymentProofUseCase
 import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceListRow
@@ -14,7 +16,11 @@ class SupplierInvoicePaymentProofUiController(
     private val fileReader: SupplierInvoicePaymentProofFileReader,
     private val renderer: MobileUiTextRenderer,
     private val actionView: SupplierInvoicePaymentProofActionView,
-    private val openPicker: () -> Unit,
+    private val sourceDialog: SupplierInvoiceProofSourceDialog,
+    private val cameraFileFactory: SupplierInvoiceCameraProofFileFactory,
+    private val openFilePicker: () -> Unit,
+    private val openGalleryPicker: () -> Unit,
+    private val openCamera: () -> Unit,
     private val onUnauthenticated: (String) -> Unit,
     private val refreshList: () -> Unit,
     private val loadDetail: () -> Unit,
@@ -27,7 +33,7 @@ class SupplierInvoicePaymentProofUiController(
     fun updateSelection(id: String?, row: MobileSupplierInvoiceListRow?) {
         selectedId = id
         canUpload = row?.let(SupplierInvoicePaymentProofPolicy::canUpload) ?: false
-        actionView.sync(canUpload)
+        actionView.message(SupplierInvoicePaymentProofText.forSelection(row), canUpload)
     }
 
     fun reset() {
@@ -36,13 +42,10 @@ class SupplierInvoicePaymentProofUiController(
         actionView.clear()
     }
 
-    fun onDetailLoaded() {
-        if (canUpload) {
-            actionView.message(activity.getString(R.string.supplier_invoice_upload_proof_ready), canUpload)
-        } else {
-            actionView.sync(canUpload)
-        }
-    }
+    fun onDetailLoaded() = actionView.message(
+        activity.getString(R.string.supplier_invoice_upload_proof_ready),
+        canUpload,
+    )
 
     fun onFailure() {
         canUpload = false
@@ -57,26 +60,42 @@ class SupplierInvoicePaymentProofUiController(
         upload(uri)
     }
 
+    fun onCaptured(bitmap: Bitmap?) {
+        if (bitmap == null) {
+            actionView.message(activity.getString(R.string.supplier_invoice_upload_proof_ready), canUpload)
+            return
+        }
+        val file = cameraFileFactory.from(bitmap)
+        if (file == null) {
+            actionView.message("Foto bukti pembayaran maksimal 2 MB.", canUpload)
+            return
+        }
+        uploadFile(file)
+    }
+
     private fun open() {
         val id = selectedId
         when {
-            id.isNullOrBlank() -> actionView.message("Pilih nota supplier terlebih dahulu.", canUpload)
+            id.isNullOrBlank() -> actionView.message("Pilih faktur supplier terlebih dahulu.", canUpload)
             !canUpload -> actionView.message(
-                "Nota supplier ini tidak bisa diunggah bukti pembayarannya.",
+                "Faktur supplier ini tidak bisa diunggah bukti pembayarannya.",
                 canUpload,
             )
-            else -> openPicker()
+            else -> sourceDialog.show(openCamera, openGalleryPicker, openFilePicker)
         }
     }
 
     private fun upload(uri: Uri) {
-        val id = selectedId ?: return
         val file = fileReader.read(uri)
         if (file == null) {
             actionView.message("File bukti pembayaran harus JPG, PNG, atau PDF maksimal 2 MB.", canUpload)
             return
         }
+        uploadFile(file)
+    }
 
+    private fun uploadFile(file: SupplierInvoicePaymentProofFile) {
+        val id = selectedId ?: return
         actionView.uploading()
         thread {
             val result = uploadUseCase.execute(id, listOf(file))

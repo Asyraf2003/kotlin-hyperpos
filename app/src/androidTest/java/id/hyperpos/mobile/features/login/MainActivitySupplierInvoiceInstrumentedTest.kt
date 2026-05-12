@@ -5,7 +5,6 @@ import android.os.SystemClock
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions.clearText
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.replaceText
 import androidx.test.espresso.action.ViewActions.scrollTo
@@ -20,6 +19,8 @@ import id.hyperpos.mobile.adapters.http.OkHttpAuthApiClient
 import id.hyperpos.mobile.adapters.storage.AndroidKeystoreSessionTokenStore
 import id.hyperpos.mobile.application.auth.LogoutResult
 import okhttp3.OkHttpClient
+import org.hamcrest.Matchers.allOf
+import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.not
 import org.junit.After
 import org.junit.Assert.assertNotNull
@@ -65,31 +66,20 @@ class MainActivitySupplierInvoiceInstrumentedTest {
                 onView(withId(R.id.supplierInvoiceSearchInput)).check(matches(isDisplayed()))
             }
 
-            onView(withId(R.id.supplierInvoiceListButton)).perform(
-                scrollTo(),
-                click(),
-            )
-
             waitUntil {
                 onView(withId(R.id.supplierInvoiceListStatusText)).check(
                     matches(withSubstring("Nota supplier dimuat")),
                 )
             }
             waitUntil {
-                onView(withId(R.id.supplierInvoiceListResultsText)).check(
-                    matches(withSubstring("Nomor faktur:")),
-                )
+                onView(withId(R.id.supplierInvoiceRowsContainer)).check(matches(isDisplayed()))
             }
             waitUntil {
-                onView(withId(R.id.supplierInvoiceListResultsText)).check(
-                    matches(withSubstring("Status pembayaran:")),
-                )
-            }
-            waitUntil {
-                onView(withId(R.id.supplierInvoiceDetailButton)).check(matches(isDisplayed()))
+                onView(allOf(withText(containsString("Nomor faktur:")), isDisplayed()))
+                    .check(matches(isDisplayed()))
             }
 
-            onView(withId(R.id.supplierInvoiceDetailButton)).perform(
+            onView(allOf(withText(containsString("Nomor faktur:")), isDisplayed())).perform(
                 scrollTo(),
                 click(),
             )
@@ -139,20 +129,14 @@ class MainActivitySupplierInvoiceInstrumentedTest {
                 replaceText("SI-BL-20260502-067"),
             )
 
-            onView(withId(R.id.supplierInvoiceListButton)).perform(
-                scrollTo(),
-                click(),
-            )
-
             waitUntil {
                 onView(withId(R.id.supplierInvoiceListStatusText)).check(
                     matches(withSubstring("Nota supplier dimuat")),
                 )
             }
             waitUntil {
-                onView(withId(R.id.supplierInvoiceListResultsText)).check(
-                    matches(withSubstring("Nomor faktur: SI-BL-20260502-067")),
-                )
+                onView(allOf(withText(containsString("Nomor faktur: SI-BL-20260502-067")), isDisplayed()))
+                    .check(matches(isDisplayed()))
             }
             waitUntil {
                 onView(withId(R.id.supplierInvoiceListResultsText)).check(
@@ -172,21 +156,17 @@ class MainActivitySupplierInvoiceInstrumentedTest {
                 onView(withId(R.id.supplierInvoiceContainer)).check(matches(isDisplayed()))
             }
 
-            onView(withId(R.id.supplierInvoiceListButton)).perform(
-                scrollTo(),
-                click(),
-            )
-
             waitUntil {
                 onView(withId(R.id.supplierInvoiceListStatusText)).check(
                     matches(withSubstring("Nota supplier dimuat")),
                 )
             }
             waitUntil {
-                onView(withId(R.id.supplierInvoiceDetailButton)).check(matches(isDisplayed()))
+                onView(allOf(withText(containsString("Nomor faktur:")), isDisplayed()))
+                    .check(matches(isDisplayed()))
             }
 
-            onView(withId(R.id.supplierInvoiceDetailButton)).perform(
+            onView(allOf(withText(containsString("Nomor faktur:")), isDisplayed())).perform(
                 scrollTo(),
                 click(),
             )
@@ -240,11 +220,6 @@ class MainActivitySupplierInvoiceInstrumentedTest {
                 }
             }
 
-            onView(withId(R.id.supplierInvoiceListButton)).perform(
-                scrollTo(),
-                click(),
-            )
-
             waitUntil {
                 onView(withId(R.id.statusText)).check(
                     matches(withSubstring("Autentikasi diperlukan")),
@@ -273,11 +248,6 @@ class MainActivitySupplierInvoiceInstrumentedTest {
             onView(withId(R.id.passwordInput)).perform(
                 replaceText("MobileSmoke123!"),
             )
-            onView(withId(R.id.deviceNameInput)).perform(
-                clearText(),
-                replaceText("android-supplier-invoice-cashier-hidden-regression"),
-            )
-
             onView(withId(R.id.loginButton)).perform(click())
 
             waitUntil {
@@ -299,11 +269,6 @@ class MainActivitySupplierInvoiceInstrumentedTest {
         onView(withId(R.id.passwordInput)).perform(
             replaceText("MobileAdminSmoke123!"),
         )
-        onView(withId(R.id.deviceNameInput)).perform(
-            clearText(),
-            replaceText("android-supplier-invoice-role-aware-regression"),
-        )
-
         onView(withId(R.id.loginButton)).perform(click())
     }
 

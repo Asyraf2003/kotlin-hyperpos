@@ -17,7 +17,8 @@ class SupplierInvoicePaymentProofActionView(
 
     fun uploading() {
         binding.supplierInvoicePaymentProofButton.isEnabled = false
-        binding.supplierInvoicePaymentProofStatusText.text = "Mengunggah bukti pembayaran supplier..."
+        binding.supplierInvoicePaymentProofStatusText.text =
+            "Mengunggah bukti pembayaran supplier..."
         sync(canUpload = true)
     }
 
