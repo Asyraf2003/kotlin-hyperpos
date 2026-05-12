@@ -9,10 +9,13 @@ import id.hyperpos.mobile.application.auth.CurrentSessionUseCase
 import id.hyperpos.mobile.application.auth.LoginRequest
 import id.hyperpos.mobile.application.auth.LoginResult
 import id.hyperpos.mobile.application.auth.LoginUseCase
+import id.hyperpos.mobile.application.auth.LogoutResult
+import id.hyperpos.mobile.application.auth.LogoutUseCase
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -72,4 +75,59 @@ class OkHttpAuthApiClientCurrentSessionInstrumentedTest {
             }
         }
     }
+    @Test
+    fun logoutRevokesServerTokenAndClearsLocalToken() {
+        tokenStore.clear()
+
+        val login = LoginUseCase(
+            authApi = authApi,
+            tokenStore = tokenStore,
+        ).execute(
+            LoginRequest(
+                email = "mobile-android-smoke@example.test",
+                password = "MobileSmoke123!",
+                deviceName = "android-logout-proof",
+            ),
+        )
+
+        when (login) {
+            is LoginResult.Success -> Unit
+            is LoginResult.Failure -> fail("Expected login success before logout smoke: ${login.message}")
+        }
+
+        val storedToken = tokenStore.read()
+        assertNotNull(storedToken)
+        assertTrue(storedToken!!.isNotBlank())
+
+        val logout = LogoutUseCase(
+            authApi = authApi,
+            tokenStore = tokenStore,
+        ).execute()
+
+        when (logout) {
+            is LogoutResult.Success -> {
+                assertEquals("Logout berhasil.", logout.message)
+            }
+            is LogoutResult.NoSession -> {
+                fail("Expected logout with stored token, got no local session: ${logout.message}")
+            }
+            is LogoutResult.Failure -> {
+                fail("Expected logout success: ${logout.message}")
+            }
+        }
+
+        assertNull(tokenStore.read())
+
+        val revokedSession = authApi.currentSession(storedToken)
+
+        when (revokedSession) {
+            is CurrentSessionResult.Success -> {
+                fail("Expected revoked token to be rejected by /me.")
+            }
+            is CurrentSessionResult.Failure -> {
+                assertEquals("Autentikasi diperlukan.", revokedSession.message)
+            }
+        }
+    }
+
 }
