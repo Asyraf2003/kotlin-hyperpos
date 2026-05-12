@@ -63,6 +63,9 @@ class MainActivityProductSearchInstrumentedTest {
             waitUntil {
                 onView(withId(R.id.productSearchContainer)).check(matches(isDisplayed()))
             }
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceContainer)).check(matches(not(isDisplayed())))
+            }
 
             onView(withId(R.id.productSearchInput)).perform(
                 scrollTo(),
@@ -130,6 +133,9 @@ class MainActivityProductSearchInstrumentedTest {
             }
             waitUntil {
                 onView(withId(R.id.productSearchContainer)).check(matches(not(isDisplayed())))
+            }
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceContainer)).check(matches(not(isDisplayed())))
             }
 
             assertNull(tokenStore.read())

@@ -117,6 +117,13 @@
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
+            <EditText
+                android:id="@+id/supplierInvoiceSearchInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/supplier_invoice_search_hint"
+                android:inputType="text" />
+
             <Button
                 android:id="@+id/supplierInvoiceListButton"
                 android:layout_width="match_parent"

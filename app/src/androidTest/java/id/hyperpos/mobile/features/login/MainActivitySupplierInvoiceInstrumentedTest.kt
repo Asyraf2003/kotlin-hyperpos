@@ -15,14 +15,15 @@ import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withSubstring
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import id.hyperpos.mobile.R
-import id.hyperpos.mobile.adapters.storage.AndroidKeystoreSessionTokenStore
 import id.hyperpos.mobile.adapters.http.MobileApiConfig
 import id.hyperpos.mobile.adapters.http.OkHttpAuthApiClient
+import id.hyperpos.mobile.adapters.storage.AndroidKeystoreSessionTokenStore
 import id.hyperpos.mobile.application.auth.LogoutResult
-import id.hyperpos.mobile.application.auth.LogoutUseCase
 import okhttp3.OkHttpClient
 import org.hamcrest.Matchers.not
 import org.junit.After
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,14 +32,9 @@ import org.junit.runner.RunWith
 class MainActivitySupplierInvoiceInstrumentedTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val tokenStore = AndroidKeystoreSessionTokenStore(context)
-    private val httpClient = OkHttpClient()
     private val authApi = OkHttpAuthApiClient(
         config = MobileApiConfig(baseUrl = "http://127.0.0.1:8000/api/v1"),
-        httpClient = httpClient,
-    )
-    private val logoutUseCase = LogoutUseCase(
-        authApi = authApi,
-        tokenStore = tokenStore,
+        httpClient = OkHttpClient(),
     )
 
     @Before
@@ -60,10 +56,13 @@ class MainActivitySupplierInvoiceInstrumentedTest {
                 onView(withId(R.id.logoutButton)).check(matches(isDisplayed()))
             }
             waitUntil {
-                onView(withId(R.id.productSearchContainer)).check(matches(isDisplayed()))
+                onView(withId(R.id.productSearchContainer)).check(matches(not(isDisplayed())))
             }
             waitUntil {
                 onView(withId(R.id.supplierInvoiceContainer)).check(matches(isDisplayed()))
+            }
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceSearchInput)).check(matches(isDisplayed()))
             }
 
             onView(withId(R.id.supplierInvoiceListButton)).perform(
@@ -78,12 +77,12 @@ class MainActivitySupplierInvoiceInstrumentedTest {
             }
             waitUntil {
                 onView(withId(R.id.supplierInvoiceListResultsText)).check(
-                    matches(withSubstring("Outstanding: Rp")),
+                    matches(withSubstring("Nomor faktur:")),
                 )
             }
             waitUntil {
                 onView(withId(R.id.supplierInvoiceListResultsText)).check(
-                    matches(withSubstring("Status:")),
+                    matches(withSubstring("Status pembayaran:")),
                 )
             }
             waitUntil {
@@ -108,6 +107,11 @@ class MainActivitySupplierInvoiceInstrumentedTest {
             waitUntil {
                 onView(withId(R.id.supplierInvoiceDetailResultsText)).check(
                     matches(withSubstring("Total: Rp")),
+                )
+            }
+            waitUntil {
+                onView(withId(R.id.supplierInvoiceDetailResultsText)).check(
+                    matches(withSubstring("Status pembayaran:")),
                 )
             }
             waitUntil {
@@ -166,9 +170,10 @@ class MainActivitySupplierInvoiceInstrumentedTest {
             waitUntil {
                 onView(withId(R.id.logoutButton)).check(matches(not(isDisplayed())))
             }
+
+            assertNull(tokenStore.read())
         }
     }
-
 
     @Test
     fun revokedTokenClearsSupplierInvoiceUiState() {
@@ -179,16 +184,18 @@ class MainActivitySupplierInvoiceInstrumentedTest {
                 onView(withId(R.id.supplierInvoiceContainer)).check(matches(isDisplayed()))
             }
 
-            val logoutResult = logoutUseCase.execute()
+            val storedToken = tokenStore.read()
+            assertNotNull(storedToken)
+
+            val logoutResult = authApi.logout(storedToken!!)
+
             when (logoutResult) {
-                is LogoutResult.Success -> {
-                    // Backend token revoked and local token cleared through use case.
-                }
+                is LogoutResult.Success -> Unit
                 is LogoutResult.NoSession -> {
-                    throw AssertionError("Expected local token before revoked supplier invoice UI proof.")
+                    throw AssertionError("Expected backend logout success before supplier invoice invalid-session UI proof: ${logoutResult.message}")
                 }
                 is LogoutResult.Failure -> {
-                    throw AssertionError("Expected backend logout before revoked supplier invoice UI proof: ${logoutResult.message}")
+                    throw AssertionError("Expected backend logout success before supplier invoice invalid-session UI proof: ${logoutResult.message}")
                 }
             }
 
@@ -211,9 +218,10 @@ class MainActivitySupplierInvoiceInstrumentedTest {
             waitUntil {
                 onView(withId(R.id.logoutButton)).check(matches(not(isDisplayed())))
             }
+
+            assertNull(tokenStore.read())
         }
     }
-
 
     @Test
     fun cashierLoginDoesNotShowSupplierInvoicesUi() {
@@ -252,7 +260,7 @@ class MainActivitySupplierInvoiceInstrumentedTest {
         )
         onView(withId(R.id.deviceNameInput)).perform(
             clearText(),
-            replaceText("android-supplier-invoice-detail-ui-regression"),
+            replaceText("android-supplier-invoice-role-aware-regression"),
         )
 
         onView(withId(R.id.loginButton)).perform(click())

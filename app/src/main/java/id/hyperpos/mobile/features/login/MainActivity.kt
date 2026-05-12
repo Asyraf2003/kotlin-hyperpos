@@ -147,13 +147,7 @@ class MainActivity : AppCompatActivity() {
                 binding.loginButton.isEnabled = true
                 binding.statusText.text = when (result) {
                     is LoginResult.Success -> {
-                        binding.productSearchContainer.visibility = View.VISIBLE
-                        binding.logoutButton.visibility = View.VISIBLE
-                        binding.supplierInvoiceContainer.visibility = if (result.session.actor.role == "admin") {
-                            View.VISIBLE
-                        } else {
-                            View.GONE
-                        }
+                        showAuthenticatedUi(result.session.actor.role)
                         "Login berhasil: ${result.session.actor.name} (${result.session.actor.role})"
                     }
                     is LoginResult.Failure -> result.message
@@ -216,8 +210,13 @@ class MainActivity : AppCompatActivity() {
         binding.supplierInvoiceListResultsText.text = ""
         resetSupplierInvoiceDetailSelection()
 
+        val query = binding.supplierInvoiceSearchInput.text.toString()
+            .trim()
+            .takeIf { it.isNotEmpty() }
+
         thread {
             val result = listSupplierInvoicesUseCase.execute(
+                query = query,
                 paymentStatus = "all",
                 page = 1,
             )
@@ -282,6 +281,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showAuthenticatedUi(role: String) {
+        setLoginFormVisible(false)
+        binding.logoutButton.visibility = View.VISIBLE
+
+        when (role) {
+            "admin" -> {
+                binding.productSearchContainer.visibility = View.GONE
+                binding.supplierInvoiceContainer.visibility = View.VISIBLE
+            }
+            "kasir" -> {
+                binding.productSearchContainer.visibility = View.VISIBLE
+                binding.supplierInvoiceContainer.visibility = View.GONE
+            }
+            else -> {
+                binding.productSearchContainer.visibility = View.GONE
+                binding.supplierInvoiceContainer.visibility = View.GONE
+            }
+        }
+    }
+
     private fun handleUnauthenticated(message: String) {
         tokenStore.clear()
         resetAuthenticatedUi()
@@ -289,6 +308,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resetAuthenticatedUi() {
+        setLoginFormVisible(true)
+
         binding.logoutButton.visibility = View.GONE
         binding.logoutButton.isEnabled = true
 
@@ -300,9 +321,20 @@ class MainActivity : AppCompatActivity() {
 
         binding.supplierInvoiceContainer.visibility = View.GONE
         binding.supplierInvoiceListButton.isEnabled = true
+        binding.supplierInvoiceSearchInput.setText("")
         binding.supplierInvoiceListStatusText.text = getString(id.hyperpos.mobile.R.string.supplier_invoice_ready)
         binding.supplierInvoiceListResultsText.text = ""
         resetSupplierInvoiceDetailSelection()
+    }
+
+    private fun setLoginFormVisible(visible: Boolean) {
+        val visibility = if (visible) View.VISIBLE else View.GONE
+
+        binding.emailInput.visibility = visibility
+        binding.passwordInput.visibility = visibility
+        binding.deviceNameInput.visibility = visibility
+        binding.loginButton.visibility = visibility
+        binding.loginButton.isEnabled = true
     }
 
     private fun resetSupplierInvoiceDetailSelection() {
@@ -338,10 +370,9 @@ class MainActivity : AppCompatActivity() {
                 ?: "Supplier tidak diketahui"
 
             listOf(
-                row.nomorFaktur,
-                supplierName,
-                "Outstanding: Rp ${rupiahFormat.format(row.outstandingRupiah)}",
-                "Status: ${row.policyState}",
+                "Nomor faktur: ${row.nomorFaktur}",
+                "Supplier: $supplierName",
+                "Status pembayaran: ${paymentStatusLabel(row.outstandingRupiah)}",
             ).joinToString(separator = "\n")
         }
     }
@@ -359,8 +390,7 @@ class MainActivity : AppCompatActivity() {
                 "Nomor faktur: ${summary.nomorFaktur}",
                 "Supplier: $supplierName",
                 "Total: Rp ${rupiahFormat.format(summary.grandTotalRupiah)}",
-                "Outstanding: Rp ${rupiahFormat.format(summary.outstandingRupiah)}",
-                "Status: ${summary.policyState}",
+                "Status pembayaran: ${paymentStatusLabel(summary.outstandingRupiah)}",
             ).joinToString(separator = "\n"),
             "Rincian barang:",
             renderSupplierInvoiceLines(lines),
@@ -379,6 +409,14 @@ class MainActivity : AppCompatActivity() {
                 "Harga satuan: Rp ${rupiahFormat.format(line.unitCostRupiah)}",
                 "Subtotal: Rp ${rupiahFormat.format(line.lineTotalRupiah)}",
             ).joinToString(separator = "\n")
+        }
+    }
+
+    private fun paymentStatusLabel(outstandingRupiah: Long): String {
+        return if (outstandingRupiah <= 0L) {
+            "Lunas"
+        } else {
+            "Belum lunas"
         }
     }
 }
