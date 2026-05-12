@@ -13,15 +13,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var proofUi: SupplierInvoicePaymentProofUiController
 
     private val deps by lazy { MainActivityDependencies(this) }
-    private val proofFilePicker = registerForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri -> proofUi.onPicked(uri) }
-    private val proofGalleryPicker = registerForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri -> proofUi.onPicked(uri) }
-    private val proofCamera = registerForActivityResult(
-        ActivityResultContracts.TakePicturePreview(),
-    ) { bitmap -> proofUi.onCaptured(bitmap) }
+    private val proofFilePicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
+        uri -> proofUi.onPicked(uri)
+    }
+    private val proofGalleryPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
+        uri -> proofUi.onPicked(uri)
+    }
+    private val proofCamera = registerForActivityResult(ActivityResultContracts.TakePicturePreview()) {
+        bitmap -> proofUi.onCaptured(bitmap)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,38 +50,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun proofController(renderer: MobileUiTextRenderer) =
         SupplierInvoicePaymentProofUiController(
-            this,
-            deps.uploadSupplierInvoicePaymentProofUseCase,
-            SupplierInvoicePaymentProofFileReader(contentResolver),
-            renderer,
+            this, deps.uploadSupplierInvoicePaymentProofUseCase,
+            SupplierInvoicePaymentProofFileReader(contentResolver), renderer,
             SupplierInvoicePaymentProofActionView(binding),
-            SupplierInvoiceProofSourceDialog(this),
-            SupplierInvoiceCameraProofFileFactory(),
+            SupplierInvoiceProofSourceDialog(this), SupplierInvoiceCameraProofFileFactory(),
             { proofFilePicker.launch(SupplierInvoicePaymentProofFileReader.MIME_TYPES) },
             { proofGalleryPicker.launch(arrayOf("image/jpeg", "image/png")) },
-            { proofCamera.launch(null) },
-            ::handleUnauthenticated,
-            { supplierUi.refreshListKeepingSelection() },
-            { supplierUi.loadDetail() },
+            { proofCamera.launch(null) }, ::handleUnauthenticated,
+            { supplierUi.refreshListKeepingSelection() }, { supplierUi.loadDetail() },
         )
 
     private fun supplierController(renderer: MobileUiTextRenderer) =
         SupplierInvoiceUiController(
-            activity = this,
-            binding = binding,
-            listUseCase = deps.listSupplierInvoicesUseCase,
-            detailUseCase = deps.getSupplierInvoiceDetailUseCase,
-            listView = SupplierInvoiceListResultView(
-                binding,
-                renderer,
-                proofUi,
-                SupplierInvoiceRowButtonFactory(this),
-                { row -> supplierUi.selectAndLoadDetail(row) },
-                ::handleUnauthenticated,
+            this, binding, deps.listSupplierInvoicesUseCase, deps.getSupplierInvoiceDetailUseCase,
+            SupplierInvoiceListResultView(
+                binding, renderer, proofUi, SupplierInvoiceRowButtonFactory(this),
+                { row -> supplierUi.selectAndLoadDetail(row) }, ::handleUnauthenticated,
             ),
-            detailView = SupplierInvoiceDetailResultView(
-                binding, renderer, proofUi, ::handleUnauthenticated,
-            ),
+            SupplierInvoiceDetailResultView(binding, renderer, proofUi, ::handleUnauthenticated),
         )
 
     private fun showAuthenticatedUi(role: String) {

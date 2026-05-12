@@ -1,5 +1,4 @@
 package id.hyperpos.mobile.features.login
-
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
@@ -18,72 +17,54 @@ class SupplierInvoicePaymentProofUiController(
     private val actionView: SupplierInvoicePaymentProofActionView,
     private val sourceDialog: SupplierInvoiceProofSourceDialog,
     private val cameraFileFactory: SupplierInvoiceCameraProofFileFactory,
-    private val openFilePicker: () -> Unit,
-    private val openGalleryPicker: () -> Unit,
-    private val openCamera: () -> Unit,
-    private val onUnauthenticated: (String) -> Unit,
-    private val refreshList: () -> Unit,
-    private val loadDetail: () -> Unit,
+    private val openFilePicker: () -> Unit, private val openGalleryPicker: () -> Unit,
+    private val openCamera: () -> Unit, private val onUnauthenticated: (String) -> Unit,
+    private val refreshList: () -> Unit, private val loadDetail: () -> Unit,
 ) {
     private var selectedId: String? = null
     private var canUpload = false
-
     fun bind() = actionView.onClick { open() }
-
     fun updateSelection(id: String?, row: MobileSupplierInvoiceListRow?) {
         selectedId = id
         canUpload = row?.let(SupplierInvoicePaymentProofPolicy::canUpload) ?: false
         actionView.message(SupplierInvoicePaymentProofText.forSelection(row), canUpload)
     }
-
     fun reset() {
         selectedId = null
         canUpload = false
         actionView.clear()
     }
-
     fun onDetailLoaded() = readyMessage()
-
     fun onFailure() {
         canUpload = false
         actionView.sync(canUpload)
     }
-
     fun onPicked(uri: Uri?) {
         if (uri == null) readyMessage() else uploadUri(uri)
     }
-
     fun onCaptured(bitmap: Bitmap?) {
-        val file = bitmap?.let(cameraFileFactory::from)
         if (bitmap == null) return readyMessage()
-        if (file == null) {
-            actionView.message("Foto bukti pembayaran maksimal 2 MB.", canUpload)
+        val file = cameraFileFactory.from(bitmap)
+        if (file == null) actionView.message("Foto bukti pembayaran maksimal 2 MB.", canUpload)
+        else uploadFile(file)
+    }
+    private fun open() {
+        if (selectedId.isNullOrBlank()) {
+            actionView.message("Pilih faktur supplier terlebih dahulu.", canUpload)
             return
         }
-        uploadFile(file)
-    }
-
-    private fun open() {
-        when {
-            selectedId.isNullOrBlank() ->
-                actionView.message("Pilih faktur supplier terlebih dahulu.", canUpload)
-            !canUpload -> actionView.message(
-                "Faktur supplier ini tidak bisa diunggah bukti pembayarannya.",
-                canUpload,
-            )
-            else -> sourceDialog.show(openCamera, openGalleryPicker, openFilePicker)
+        if (!canUpload) {
+            actionView.message("Faktur supplier ini tidak bisa diunggah bukti pembayarannya.", canUpload)
+            return
         }
+        sourceDialog.show(openCamera, openGalleryPicker, openFilePicker)
     }
-
     private fun uploadUri(uri: Uri) {
         val file = fileReader.read(uri)
         if (file == null) {
             actionView.message("File bukti pembayaran harus JPG, PNG, atau PDF maksimal 2 MB.", canUpload)
-        } else {
-            uploadFile(file)
-        }
+        } else uploadFile(file)
     }
-
     private fun uploadFile(file: SupplierInvoicePaymentProofFile) {
         val id = selectedId ?: return
         actionView.uploading()
@@ -92,22 +73,19 @@ class SupplierInvoicePaymentProofUiController(
             activity.runOnUiThread { handleUploadResult(result) }
         }
     }
-
     private fun handleUploadResult(result: UploadSupplierInvoicePaymentProofResult) {
         when (result) {
-            is UploadSupplierInvoicePaymentProofResult.Success -> {
-                canUpload = false
-                actionView.message(renderer.paymentProofUploadSuccess(result), canUpload)
-                refreshList()
-                loadDetail()
-            }
-            is UploadSupplierInvoicePaymentProofResult.Failure ->
-                actionView.message(result.message, canUpload)
-            is UploadSupplierInvoicePaymentProofResult.Unauthenticated ->
-                onUnauthenticated(result.message)
+            is UploadSupplierInvoicePaymentProofResult.Success -> handleSuccess(result)
+            is UploadSupplierInvoicePaymentProofResult.Failure -> actionView.message(result.message, canUpload)
+            is UploadSupplierInvoicePaymentProofResult.Unauthenticated -> onUnauthenticated(result.message)
         }
     }
-
+    private fun handleSuccess(result: UploadSupplierInvoicePaymentProofResult.Success) {
+        canUpload = false
+        actionView.message(renderer.paymentProofUploadSuccess(result), canUpload)
+        refreshList()
+        loadDetail()
+    }
     private fun readyMessage() {
         actionView.message(activity.getString(R.string.supplier_invoice_upload_proof_ready), canUpload)
     }
