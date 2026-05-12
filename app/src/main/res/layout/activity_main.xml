@@ -166,6 +166,22 @@
                 android:layout_height="wrap_content"
                 android:paddingTop="12dp"
                 android:textSize="16sp" />
+
+            <Button
+                android:id="@+id/supplierInvoicePaymentProofButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/supplier_invoice_upload_proof_button"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/supplierInvoicePaymentProofStatusText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="12dp"
+                android:text="@string/supplier_invoice_upload_proof_ready"
+                android:textSize="16sp"
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
