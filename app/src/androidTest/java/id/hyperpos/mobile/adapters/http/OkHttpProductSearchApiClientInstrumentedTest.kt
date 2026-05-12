@@ -87,6 +87,9 @@ class OkHttpProductSearchApiClientInstrumentedTest {
             is ProductSearchResult.Failure -> {
                 fail("Expected product search success using stored token: ${result.message}")
             }
+            is ProductSearchResult.Unauthenticated -> {
+                fail("Expected authenticated product search using stored token: ${result.message}")
+            }
         }
     }
 }
