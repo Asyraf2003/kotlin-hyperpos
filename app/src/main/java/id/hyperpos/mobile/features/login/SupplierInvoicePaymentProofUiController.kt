@@ -88,20 +88,12 @@ class SupplierInvoicePaymentProofUiController(
         when (result) {
             is UploadSupplierInvoicePaymentProofResult.Success -> {
                 canUpload = false
-                actionView.message(successMessage(result), canUpload)
+                actionView.message(renderer.paymentProofUploadSuccess(result), canUpload)
                 refreshList()
                 loadDetail()
             }
             is UploadSupplierInvoicePaymentProofResult.Failure -> actionView.message(result.message, canUpload)
             is UploadSupplierInvoicePaymentProofResult.Unauthenticated -> onUnauthenticated(result.message)
         }
-    }
-
-    private fun successMessage(result: UploadSupplierInvoicePaymentProofResult.Success): String {
-        return listOf(
-            result.message,
-            "Status pembayaran: ${renderer.paymentStatusLabel(result.upload.outstandingRupiah)}",
-            "Lampiran bukti: ${result.upload.attachmentCount}",
-        ).joinToString(separator = "\n")
     }
 }

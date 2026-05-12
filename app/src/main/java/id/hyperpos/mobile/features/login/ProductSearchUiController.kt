@@ -19,12 +19,16 @@ class ProductSearchUiController(
         binding.productSearchButton.setOnClickListener { searchProducts() }
     }
 
+    fun setVisible(visible: Boolean) {
+        binding.productSearchContainer.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
     fun show() {
-        binding.productSearchContainer.visibility = View.VISIBLE
+        setVisible(true)
     }
 
     fun hide() {
-        binding.productSearchContainer.visibility = View.GONE
+        setVisible(false)
     }
 
     fun reset() {

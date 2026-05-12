@@ -1,5 +1,6 @@
 package id.hyperpos.mobile.features.login
 
+import id.hyperpos.mobile.application.procurement.UploadSupplierInvoicePaymentProofResult
 import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceLine
 import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceListRow
 import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceSummary
@@ -60,6 +61,16 @@ class MobileUiTextRenderer {
             "Rincian barang:",
             supplierInvoiceLines(lines),
         ).joinToString(separator = "\n\n")
+    }
+
+    fun paymentProofUploadSuccess(
+        result: UploadSupplierInvoicePaymentProofResult.Success,
+    ): String {
+        return listOf(
+            result.message,
+            "Status pembayaran: ${paymentStatusLabel(result.upload.outstandingRupiah)}",
+            "Lampiran bukti: ${result.upload.attachmentCount}",
+        ).joinToString(separator = "\n")
     }
 
     fun paymentStatusLabel(outstandingRupiah: Long): String {
