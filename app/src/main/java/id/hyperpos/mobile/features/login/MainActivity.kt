@@ -6,15 +6,19 @@ import androidx.appcompat.app.AppCompatActivity
 import id.hyperpos.mobile.adapters.http.MobileApiConfig
 import id.hyperpos.mobile.adapters.http.OkHttpAuthApiClient
 import id.hyperpos.mobile.adapters.http.OkHttpProductSearchApiClient
+import id.hyperpos.mobile.adapters.http.OkHttpSupplierInvoiceApiClient
 import id.hyperpos.mobile.adapters.storage.AndroidKeystoreSessionTokenStore
 import id.hyperpos.mobile.application.auth.LoginRequest
 import id.hyperpos.mobile.application.auth.LoginResult
 import id.hyperpos.mobile.application.auth.LoginUseCase
 import id.hyperpos.mobile.application.auth.LogoutResult
 import id.hyperpos.mobile.application.auth.LogoutUseCase
+import id.hyperpos.mobile.application.procurement.ListSupplierInvoicesUseCase
+import id.hyperpos.mobile.application.procurement.SupplierInvoiceListResult
 import id.hyperpos.mobile.application.product.ProductSearchResult
 import id.hyperpos.mobile.application.product.SearchProductsUseCase
 import id.hyperpos.mobile.databinding.ActivityMainBinding
+import id.hyperpos.mobile.domain.procurement.MobileSupplierInvoiceListRow
 import id.hyperpos.mobile.domain.product.MobileProductSearchRow
 import okhttp3.OkHttpClient
 import java.text.NumberFormat
@@ -67,6 +71,16 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    private val listSupplierInvoicesUseCase by lazy {
+        ListSupplierInvoicesUseCase(
+            supplierInvoiceApi = OkHttpSupplierInvoiceApiClient(
+                config = apiConfig,
+                httpClient = httpClient,
+            ),
+            tokenStore = tokenStore,
+        )
+    }
+
     private val rupiahFormat by lazy {
         NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID"))
     }
@@ -90,6 +104,10 @@ class MainActivity : AppCompatActivity() {
         binding.productSearchButton.setOnClickListener {
             searchProducts()
         }
+
+        binding.supplierInvoiceListButton.setOnClickListener {
+            listSupplierInvoices()
+        }
     }
 
     private fun login() {
@@ -111,6 +129,11 @@ class MainActivity : AppCompatActivity() {
                     is LoginResult.Success -> {
                         binding.productSearchContainer.visibility = View.VISIBLE
                         binding.logoutButton.visibility = View.VISIBLE
+                        binding.supplierInvoiceContainer.visibility = if (result.session.actor.role == "admin") {
+                            View.VISIBLE
+                        } else {
+                            View.GONE
+                        }
                         "Login berhasil: ${result.session.actor.name} (${result.session.actor.role})"
                     }
                     is LoginResult.Failure -> result.message
@@ -171,14 +194,53 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun listSupplierInvoices() {
+        binding.supplierInvoiceListButton.isEnabled = false
+        binding.supplierInvoiceListStatusText.text = "Memuat nota supplier..."
+        binding.supplierInvoiceListResultsText.text = ""
+
+        thread {
+            val result = listSupplierInvoicesUseCase.execute(
+                paymentStatus = "all",
+                page = 1,
+            )
+
+            runOnUiThread {
+                binding.supplierInvoiceListButton.isEnabled = true
+
+                when (result) {
+                    is SupplierInvoiceListResult.Success -> {
+                        binding.supplierInvoiceListStatusText.text = "Nota supplier dimuat (${result.rows.size}/${result.perPage})"
+                        binding.supplierInvoiceListResultsText.text = renderSupplierInvoiceRows(result.rows)
+                    }
+                    is SupplierInvoiceListResult.Failure -> {
+                        binding.supplierInvoiceListStatusText.text = result.message
+                        binding.supplierInvoiceListResultsText.text = ""
+                    }
+                    is SupplierInvoiceListResult.Unauthenticated -> {
+                        tokenStore.clear()
+                        resetAuthenticatedUi()
+                        binding.statusText.text = result.message
+                    }
+                }
+            }
+        }
+    }
+
     private fun resetAuthenticatedUi() {
         binding.logoutButton.visibility = View.GONE
         binding.logoutButton.isEnabled = true
+
         binding.productSearchContainer.visibility = View.GONE
         binding.productSearchButton.isEnabled = true
         binding.productSearchInput.setText("")
         binding.productSearchStatusText.text = getString(id.hyperpos.mobile.R.string.product_search_ready)
         binding.productSearchResultsText.text = ""
+
+        binding.supplierInvoiceContainer.visibility = View.GONE
+        binding.supplierInvoiceListButton.isEnabled = true
+        binding.supplierInvoiceListStatusText.text = getString(id.hyperpos.mobile.R.string.supplier_invoice_ready)
+        binding.supplierInvoiceListResultsText.text = ""
     }
 
     private fun renderProductRows(rows: List<MobileProductSearchRow>): String {
@@ -191,6 +253,25 @@ class MainActivity : AppCompatActivity() {
                 row.label,
                 "Stok: ${row.availableStock}",
                 "Harga jual: Rp ${rupiahFormat.format(row.defaultUnitPriceRupiah)}",
+            ).joinToString(separator = "\n")
+        }
+    }
+
+    private fun renderSupplierInvoiceRows(rows: List<MobileSupplierInvoiceListRow>): String {
+        if (rows.isEmpty()) {
+            return "Tidak ada nota supplier ditemukan."
+        }
+
+        return rows.joinToString(separator = "\n\n") { row ->
+            val supplierName = row.supplierNamaPtPengirimCurrent
+                ?: row.supplierNamaPtPengirimSnapshot
+                ?: "Supplier tidak diketahui"
+
+            listOf(
+                row.nomorFaktur,
+                supplierName,
+                "Outstanding: Rp ${rupiahFormat.format(row.outstandingRupiah)}",
+                "Status: ${row.policyState}",
             ).joinToString(separator = "\n")
         }
     }

@@ -11,4 +11,7 @@
     <string name="product_search_hint">Cari produk, contoh: ban</string>
     <string name="product_search_button">Cari Produk</string>
     <string name="product_search_ready">Masukkan kata kunci minimal 2 karakter.</string>
+    <string name="supplier_invoice_title">Nota Supplier Admin</string>
+    <string name="supplier_invoice_button">Muat Nota Supplier</string>
+    <string name="supplier_invoice_ready">Tekan tombol untuk memuat nota supplier.</string>
 </resources>
