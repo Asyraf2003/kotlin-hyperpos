@@ -154,7 +154,7 @@ class MainActivity : AppCompatActivity() {
 
                 when (result) {
                     is ProductSearchResult.Success -> {
-                        binding.productSearchStatusText.text = "Hasil untuk "${result.query}" (${result.rows.size}/${result.limit})"
+                        binding.productSearchStatusText.text = "Hasil untuk \"${result.query}\" (${result.rows.size}/${result.limit})"
                         binding.productSearchResultsText.text = renderProductRows(result.rows)
                     }
                     is ProductSearchResult.Failure -> {
