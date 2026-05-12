@@ -42,7 +42,6 @@ class SupplierInvoiceUiController(
         binding.supplierInvoiceListStatusText.text = "Memuat nota supplier..."
         binding.supplierInvoiceListResultsText.text = ""
         resetDetailSelection()
-
         thread {
             val result = listUseCase.execute(query = query(), paymentStatus = "all", page = 1)
             activity.runOnUiThread {
@@ -64,11 +63,9 @@ class SupplierInvoiceUiController(
             binding.supplierInvoiceDetailResultsText.text = ""
             return
         }
-
         binding.supplierInvoiceDetailButton.isEnabled = false
         binding.supplierInvoiceDetailStatusText.text = "Memuat detail nota supplier..."
         binding.supplierInvoiceDetailResultsText.text = ""
-
         thread {
             val result = detailUseCase.execute(id)
             activity.runOnUiThread {
@@ -82,9 +79,7 @@ class SupplierInvoiceUiController(
         val id = selectedId ?: return
         thread {
             val result = listUseCase.execute(query = query(), paymentStatus = "all", page = 1)
-            activity.runOnUiThread {
-                selectedId = listView.apply(result, keepId = id)
-            }
+            activity.runOnUiThread { selectedId = listView.apply(result, keepId = id) }
         }
     }
 
