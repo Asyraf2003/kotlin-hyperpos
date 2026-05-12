@@ -1,20 +1,19 @@
 package id.hyperpos.mobile.adapters.http
 
-import id.hyperpos.mobile.application.ports.ProductSearchApiPort
-import id.hyperpos.mobile.application.product.ProductSearchResult
+import id.hyperpos.mobile.application.procurement.SupplierInvoiceDetailResult
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.IOException
 
-class OkHttpProductSearchApiClient(
+class SupplierInvoiceDetailHttpCall(
     private val config: MobileApiConfig,
     private val httpClient: OkHttpClient,
-) : ProductSearchApiPort {
-    override fun searchProducts(token: String, query: String): ProductSearchResult {
+) {
+    fun execute(token: String, supplierInvoiceId: String): SupplierInvoiceDetailResult {
         val httpRequest = Request.Builder()
-            .url(searchUrl(query))
+            .url(url(supplierInvoiceId))
             .get()
             .header("Accept", "application/json")
             .header("Authorization", "Bearer $token")
@@ -25,43 +24,40 @@ class OkHttpProductSearchApiClient(
                 val json = JSONObject(response.body?.string().orEmpty())
 
                 if (response.code == HTTP_UNAUTHORIZED) {
-                    return ProductSearchResult.Unauthenticated(
+                    return SupplierInvoiceDetailResult.Unauthenticated(
                         json.optString("message", "Sesi login tidak valid. Silakan login ulang."),
                     )
                 }
 
                 if (!response.isSuccessful || !json.optBoolean("success", false)) {
-                    return ProductSearchResult.Failure(
-                        json.optString("message", "Pencarian produk gagal."),
+                    return SupplierInvoiceDetailResult.Failure(
+                        json.optString("message", "Detail nota supplier gagal dimuat."),
                     )
                 }
 
                 success(json)
             }
         } catch (_: IOException) {
-            ProductSearchResult.Failure("Tidak bisa terhubung ke server HyperPOS.")
+            SupplierInvoiceDetailResult.Failure("Tidak bisa terhubung ke server HyperPOS.")
         } catch (_: Exception) {
-            ProductSearchResult.Failure("Respons server tidak valid.")
+            SupplierInvoiceDetailResult.Failure("Respons server tidak valid.")
         }
     }
 
-    private fun searchUrl(query: String): okhttp3.HttpUrl {
+    private fun url(supplierInvoiceId: String): okhttp3.HttpUrl {
         return config.normalizedBaseUrl.toHttpUrl()
             .newBuilder()
-            .addPathSegment("products")
-            .addPathSegment("search")
-            .addQueryParameter("q", query)
+            .addPathSegment("supplier-invoices")
+            .addPathSegment(supplierInvoiceId)
             .build()
     }
 
-    private fun success(json: JSONObject): ProductSearchResult.Success {
+    private fun success(json: JSONObject): SupplierInvoiceDetailResult.Success {
         val data = json.getJSONObject("data")
-        val meta = json.getJSONObject("meta")
 
-        return ProductSearchResult.Success(
-            rows = ProductSearchJsonMapper.rows(data.getJSONArray("rows")),
-            query = meta.getString("query"),
-            limit = meta.getInt("limit"),
+        return SupplierInvoiceDetailResult.Success(
+            summary = SupplierInvoiceDetailJsonMapper.summary(data.getJSONObject("summary")),
+            lines = SupplierInvoiceDetailJsonMapper.lines(data.getJSONArray("lines")),
         )
     }
 }
