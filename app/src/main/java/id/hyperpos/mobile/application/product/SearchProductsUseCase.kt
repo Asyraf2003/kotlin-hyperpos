@@ -10,7 +10,7 @@ class SearchProductsUseCase(
     fun execute(query: String): ProductSearchResult {
         val token = tokenStore.read()
         if (token.isNullOrBlank()) {
-            return ProductSearchResult.Failure("Sesi login tidak ditemukan.")
+            return ProductSearchResult.Unauthenticated("Sesi login tidak ditemukan. Silakan login ulang.")
         }
 
         return productSearchApi.searchProducts(token, query)

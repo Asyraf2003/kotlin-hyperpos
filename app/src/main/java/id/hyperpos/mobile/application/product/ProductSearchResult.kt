@@ -10,4 +10,5 @@ sealed class ProductSearchResult {
     ) : ProductSearchResult()
 
     data class Failure(val message: String) : ProductSearchResult()
+    data class Unauthenticated(val message: String) : ProductSearchResult()
 }

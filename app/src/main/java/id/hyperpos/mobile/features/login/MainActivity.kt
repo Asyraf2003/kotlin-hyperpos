@@ -10,6 +10,8 @@ import id.hyperpos.mobile.adapters.storage.AndroidKeystoreSessionTokenStore
 import id.hyperpos.mobile.application.auth.LoginRequest
 import id.hyperpos.mobile.application.auth.LoginResult
 import id.hyperpos.mobile.application.auth.LoginUseCase
+import id.hyperpos.mobile.application.auth.LogoutResult
+import id.hyperpos.mobile.application.auth.LogoutUseCase
 import id.hyperpos.mobile.application.product.ProductSearchResult
 import id.hyperpos.mobile.application.product.SearchProductsUseCase
 import id.hyperpos.mobile.databinding.ActivityMainBinding
@@ -34,12 +36,23 @@ class MainActivity : AppCompatActivity() {
         AndroidKeystoreSessionTokenStore(this)
     }
 
+    private val authApi by lazy {
+        OkHttpAuthApiClient(
+            config = apiConfig,
+            httpClient = httpClient,
+        )
+    }
+
     private val loginUseCase by lazy {
         LoginUseCase(
-            authApi = OkHttpAuthApiClient(
-                config = apiConfig,
-                httpClient = httpClient,
-            ),
+            authApi = authApi,
+            tokenStore = tokenStore,
+        )
+    }
+
+    private val logoutUseCase by lazy {
+        LogoutUseCase(
+            authApi = authApi,
             tokenStore = tokenStore,
         )
     }
@@ -64,10 +77,14 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.productSearchContainer.visibility = View.GONE
+        resetAuthenticatedUi()
 
         binding.loginButton.setOnClickListener {
             login()
+        }
+
+        binding.logoutButton.setOnClickListener {
+            logout()
         }
 
         binding.productSearchButton.setOnClickListener {
@@ -93,9 +110,30 @@ class MainActivity : AppCompatActivity() {
                 binding.statusText.text = when (result) {
                     is LoginResult.Success -> {
                         binding.productSearchContainer.visibility = View.VISIBLE
+                        binding.logoutButton.visibility = View.VISIBLE
                         "Login berhasil: ${result.session.actor.name} (${result.session.actor.role})"
                     }
                     is LoginResult.Failure -> result.message
+                }
+            }
+        }
+    }
+
+    private fun logout() {
+        binding.logoutButton.isEnabled = false
+        binding.statusText.text = "Logout berjalan..."
+
+        thread {
+            val result = logoutUseCase.execute()
+
+            runOnUiThread {
+                binding.logoutButton.isEnabled = true
+                resetAuthenticatedUi()
+
+                binding.statusText.text = when (result) {
+                    is LogoutResult.Success -> result.message
+                    is LogoutResult.NoSession -> result.message
+                    is LogoutResult.Failure -> "${result.message} Sesi lokal dibersihkan."
                 }
             }
         }
@@ -116,16 +154,31 @@ class MainActivity : AppCompatActivity() {
 
                 when (result) {
                     is ProductSearchResult.Success -> {
-                        binding.productSearchStatusText.text = "Hasil untuk \"${result.query}\" (${result.rows.size}/${result.limit})"
+                        binding.productSearchStatusText.text = "Hasil untuk "${result.query}" (${result.rows.size}/${result.limit})"
                         binding.productSearchResultsText.text = renderProductRows(result.rows)
                     }
                     is ProductSearchResult.Failure -> {
                         binding.productSearchStatusText.text = result.message
                         binding.productSearchResultsText.text = ""
                     }
+                    is ProductSearchResult.Unauthenticated -> {
+                        tokenStore.clear()
+                        resetAuthenticatedUi()
+                        binding.statusText.text = result.message
+                    }
                 }
             }
         }
+    }
+
+    private fun resetAuthenticatedUi() {
+        binding.logoutButton.visibility = View.GONE
+        binding.logoutButton.isEnabled = true
+        binding.productSearchContainer.visibility = View.GONE
+        binding.productSearchButton.isEnabled = true
+        binding.productSearchInput.setText("")
+        binding.productSearchStatusText.text = getString(id.hyperpos.mobile.R.string.product_search_ready)
+        binding.productSearchResultsText.text = ""
     }
 
     private fun renderProductRows(rows: List<MobileProductSearchRow>): String {

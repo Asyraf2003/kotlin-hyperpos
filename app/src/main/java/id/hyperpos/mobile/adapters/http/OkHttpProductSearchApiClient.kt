@@ -33,6 +33,12 @@ class OkHttpProductSearchApiClient(
                 val body = response.body?.string().orEmpty()
                 val json = JSONObject(body)
 
+                if (response.code == HTTP_UNAUTHORIZED) {
+                    return ProductSearchResult.Unauthenticated(
+                        json.optString("message", "Sesi login tidak valid. Silakan login ulang."),
+                    )
+                }
+
                 if (!response.isSuccessful || !json.optBoolean("success", false)) {
                     return ProductSearchResult.Failure(
                         json.optString("message", "Pencarian produk gagal."),
@@ -90,5 +96,9 @@ class OkHttpProductSearchApiClient(
         }
 
         return getInt(name)
+    }
+
+    private companion object {
+        private const val HTTP_UNAUTHORIZED = 401
     }
 }

@@ -49,6 +49,13 @@
             android:text="@string/login_ready"
             android:textSize="16sp" />
 
+        <Button
+            android:id="@+id/logoutButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/logout_button"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/productSearchContainer"
             android:layout_width="match_parent"
