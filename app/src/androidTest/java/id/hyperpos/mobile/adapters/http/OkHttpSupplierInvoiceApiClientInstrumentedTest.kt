@@ -40,6 +40,81 @@ class OkHttpSupplierInvoiceApiClientInstrumentedTest {
     }
 
     @Test
+    fun invalidTokenReturnsUnauthenticatedForSupplierInvoiceListAndDetail() {
+        tokenStore.clear()
+
+        val login = LoginUseCase(
+            authApi = authApi,
+            tokenStore = tokenStore,
+        ).execute(
+            LoginRequest(
+                email = "mobile-admin-android-supplier-invoice@example.test",
+                password = "MobileAdminSmoke123!",
+                deviceName = "android-supplier-invoice-invalid-token-proof",
+            ),
+        )
+
+        when (login) {
+            is LoginResult.Success -> assertEquals("admin", login.session.actor.role)
+            is LoginResult.Failure -> fail("Expected admin login success before invalid token proof: ${login.message}")
+        }
+
+        val validListResult = ListSupplierInvoicesUseCase(
+            supplierInvoiceApi = supplierInvoiceApi,
+            tokenStore = tokenStore,
+        ).execute(
+            paymentStatus = "all",
+            page = 1,
+        )
+
+        val supplierInvoiceId = when (validListResult) {
+            is SupplierInvoiceListResult.Success -> {
+                assertTrue("Expected at least one supplier invoice row.", validListResult.rows.isNotEmpty())
+                validListResult.rows.first().supplierInvoiceId
+            }
+            is SupplierInvoiceListResult.Failure -> {
+                fail("Expected supplier invoice list success before invalid token proof: ${validListResult.message}")
+                return
+            }
+            is SupplierInvoiceListResult.Unauthenticated -> {
+                fail("Expected authenticated supplier invoice list before invalid token proof: ${validListResult.message}")
+                return
+            }
+        }
+
+        val invalidToken = "invalid-mobile-api-token-for-supplier-invoice-regression"
+
+        when (
+            val listResult = supplierInvoiceApi.listSupplierInvoices(
+                token = invalidToken,
+                query = null,
+                paymentStatus = "all",
+                page = 1,
+            )
+        ) {
+            is SupplierInvoiceListResult.Unauthenticated -> {
+                assertTrue(listResult.message.isNotBlank())
+            }
+            is SupplierInvoiceListResult.Success -> fail("Expected unauthenticated supplier invoice list for invalid token.")
+            is SupplierInvoiceListResult.Failure -> fail("Expected unauthenticated supplier invoice list, got failure: ${listResult.message}")
+        }
+
+        when (
+            val detailResult = supplierInvoiceApi.getSupplierInvoiceDetail(
+                token = invalidToken,
+                supplierInvoiceId = supplierInvoiceId,
+            )
+        ) {
+            is SupplierInvoiceDetailResult.Unauthenticated -> {
+                assertTrue(detailResult.message.isNotBlank())
+            }
+            is SupplierInvoiceDetailResult.Success -> fail("Expected unauthenticated supplier invoice detail for invalid token.")
+            is SupplierInvoiceDetailResult.Failure -> fail("Expected unauthenticated supplier invoice detail, got failure: ${detailResult.message}")
+        }
+    }
+
+
+    @Test
     fun adminCanReadSupplierInvoicesAndDetailUsingStoredToken() {
         tokenStore.clear()
 
