@@ -1,7 +1,6 @@
 package id.hyperpos.mobile.features.login
 
 import android.os.Bundle
-import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import id.hyperpos.mobile.databinding.ActivityMainBinding
@@ -14,16 +13,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var proofUi: SupplierInvoicePaymentProofUiController
 
     private val deps by lazy { MainActivityDependencies(this) }
-
     private val proofPicker = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        proofUi.onPicked(uri)
-    }
+    ) { uri -> proofUi.onPicked(uri) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         wireControllers()
@@ -32,12 +27,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun wireControllers() {
         val renderer = MobileUiTextRenderer()
+        val proofView = SupplierInvoicePaymentProofActionView(binding)
+
         proofUi = SupplierInvoicePaymentProofUiController(
             activity = this,
-            binding = binding,
             uploadUseCase = deps.uploadSupplierInvoicePaymentProofUseCase,
             fileReader = SupplierInvoicePaymentProofFileReader(contentResolver),
             renderer = renderer,
+            actionView = proofView,
             openPicker = { proofPicker.launch(SupplierInvoicePaymentProofFileReader.MIME_TYPES) },
             onUnauthenticated = ::handleUnauthenticated,
             refreshList = { supplierUi.refreshListKeepingSelection() },
@@ -48,9 +45,8 @@ class MainActivity : AppCompatActivity() {
             binding = binding,
             listUseCase = deps.listSupplierInvoicesUseCase,
             detailUseCase = deps.getSupplierInvoiceDetailUseCase,
-            renderer = renderer,
-            proofUi = proofUi,
-            onUnauthenticated = ::handleUnauthenticated,
+            listView = SupplierInvoiceListResultView(binding, renderer, proofUi, ::handleUnauthenticated),
+            detailView = SupplierInvoiceDetailResultView(binding, renderer, proofUi, ::handleUnauthenticated),
         )
         authUi = LoginUiController(
             activity = this,
@@ -76,20 +72,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun showAuthenticatedUi(role: String) {
         authUi.showAuthenticatedControls()
-        when (role) {
-            "admin" -> {
-                productUi.hide()
-                supplierUi.show()
-            }
-            "kasir" -> {
-                productUi.show()
-                supplierUi.hide()
-            }
-            else -> {
-                productUi.hide()
-                supplierUi.hide()
-            }
-        }
+        productUi.setVisible(role == "kasir")
+        supplierUi.setVisible(role == "admin")
     }
 
     private fun handleUnauthenticated(message: String) {
